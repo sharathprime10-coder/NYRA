@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NYRA - Knowledge Base</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-error-container": "#ffdad6",
+                "on-secondary-container": "#c4abff",
+                "surface": "#11131d",
+                "inverse-on-surface": "#2f303b",
+                "on-background": "#e2e1f0",
+                "tertiary-fixed-dim": "#2fd9f4",
+                "surface-container-low": "#1a1b26",
+                "primary-fixed": "#e1e0ff",
+                "on-tertiary-fixed-variant": "#004e5a",
+                "tertiary": "#2fd9f4",
+                "on-primary-fixed-variant": "#2f2ebe",
+                "inverse-primary": "#494bd6",
+                "tertiary-container": "#008395",
+                "secondary-fixed": "#e9ddff",
+                "on-secondary-fixed-variant": "#5516be",
+                "surface-container-high": "#282934",
+                "surface-bright": "#383844",
+                "outline-variant": "#464554",
+                "surface-container": "#1e1f2a",
+                "on-primary-container": "#0d0096",
+                "on-secondary-fixed": "#23005c",
+                "secondary": "#d0bcff",
+                "secondary-fixed-dim": "#d0bcff",
+                "surface-container-lowest": "#0c0d18",
+                "outline": "#908fa0",
+                "on-surface-variant": "#c7c4d7",
+                "surface-variant": "#333440",
+                "on-tertiary-container": "#000608",
+                "error": "#ffb4ab",
+                "secondary-container": "#571bc1",
+                "primary-fixed-dim": "#c0c1ff",
+                "surface-tint": "#c0c1ff",
+                "on-tertiary": "#00363e",
+                "on-tertiary-fixed": "#001f25",
+                "surface-container-highest": "#333440",
+                "on-primary-fixed": "#07006c",
+                "background": "#11131d",
+                "primary-container": "#8083ff",
+                "tertiary-fixed": "#a2eeff",
+                "on-surface": "#e2e1f0",
+                "on-primary": "#1000a9",
+                "surface-dim": "#11131d",
+                "error-container": "#93000a",
+                "on-error": "#690005",
+                "on-secondary": "#3c0091",
+                "primary": "#c0c1ff",
+                "inverse-surface": "#e2e1f0"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "base": "8px",
+                "section-gap": "80px",
+                "container-padding-desktop": "64px",
+                "container-padding-mobile": "20px",
+                "gutter": "24px"
+        },
+        "fontFamily": {
+                "label-sm": [
+                        "Inter"
+                ],
+                "display-lg": [
+                        "Plus Jakarta Sans"
+                ],
+                "display-lg-mobile": [
+                        "Plus Jakarta Sans"
+                ],
+                "headline-md": [
+                        "Plus Jakarta Sans"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "1",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "1.1",
+                                "letterSpacing": "-0.04em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "display-lg-mobile": [
+                        "32px",
+                        {
+                                "lineHeight": "1.2",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "1.3",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "1.6",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "1.6",
+                                "fontWeight": "400"
+                        }
+                ]
+        },
+        animation: {
+            'shimmer': 'shimmer 2s linear infinite',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        },
+        keyframes: {
+            shimmer: {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' }
+            }
+        }
+      }
+    }
+  }
+</script>
+<style>
+        /* Base Glassmorphism utilities */
+        .glass-panel {
+            background: rgba(17, 19, 29, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-panel-hover:hover {
+            background: rgba(17, 19, 29, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .glass-dropzone {
+            background: rgba(17, 19, 29, 0.2);
+            backdrop-filter: blur(8px);
+            border: 2px dashed rgba(144, 143, 160, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-dropzone:hover, .glass-dropzone.dragover {
+            background: rgba(192, 193, 255, 0.05);
+            border-color: rgba(192, 193, 255, 0.6);
+        }
+
+        /* Ambient Glow for floating elements */
+        .ambient-glow {
+            box-shadow: 0 0 40px -10px rgba(192, 193, 255, 0.15);
+        }
+        
+        /* Shimmer Loading Effect */
+        .shimmer-effect {
+            background: linear-gradient(90deg, 
+                rgba(192, 193, 255, 0.05) 25%, 
+                rgba(192, 193, 255, 0.15) 50%, 
+                rgba(192, 193, 255, 0.05) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        
+        /* Typography specifics */
+        .gradient-text {
+            background: linear-gradient(135deg, #e2e1f0 0%, #c7c4d7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Horizontal Motion Blur Transition */
+        @keyframes sweep-in {
+            0% {
+                opacity: 0;
+                transform: translateX(40px);
+                filter: blur(8px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+                filter: blur(0px);
+            }
+        }
+        
+        .animate-sweep {
+            animation: sweep-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+        
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container relative">
+<!-- Background Artwork -->
+<div class="fixed inset-0 z-0 pointer-events-none opacity-65">
+<div class="absolute inset-0 w-full h-full bg-cover bg-center opacity-40 mix-blend-overlay" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBERFO5peiOJs3kh_N5478kx5r4cTOPG6uq1J1A5eg8kKNiVafDy6aBmMnX5ooV5vjL41qYPZemhZ4bcmUmANczpO6KA8hiEDpilKdbbDt9KXC-dPgdo7SY4DvTkv7Xql5iJ8Q7ssntx8ffkg0eq2sGt2FGhujO3qrSOg2ofkBVZTYS0mB9KjtUDLHWPL8lQe083ZOthNFusOCgNi7AlRzORCBZwuAGob69G6TjBiGzpukR2xnczgx0m4e42KuWxteSpM0')"></div>
+<div class="absolute inset-0 w-full h-full bg-cover bg-center opacity-70" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCg0n0w1SYDNlrVbGj9pD1LE6Ou8fIAUhVu4w70gBoeK-pegplj1x375ShXFuzbzh4_IXruzcmeMOVosaVTFq77vp9XpGBwBCcWK0-NOtyjOTjHY291GOlaAjSW7RDvZXtI3AFU_bf37PoF_xn3QJGhSYXlOsYAj6lM0EDgjbl7quB8kitrFku-worqefgylibc6oYInHqg_dIsIVtSq1VLNYmoI3AOurJ7F-4u4jVgyXMutSUKfpLIVX8IvpYnJpzt1DQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
+<div class="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/50"></div>
+</div>
+<!-- SideNavBar (JSON Config) -->
+<nav class="w-[280px] h-screen fixed left-0 top-0 bg-surface/40 dark:bg-surface/40 backdrop-blur-xl border-r border-outline-variant/10 shadow-2xl shadow-primary/5 flex flex-col p-6 gap-4 z-50 hidden md:flex glass-panel">
+<!-- Header -->
+<div class="flex items-center gap-4 mb-8 px-2">
+<div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center ambient-glow text-on-primary-container overflow-hidden">
+<img alt="NYRA Logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACFunvqBLVx_95iD9XN29dKXmng7gtzppwJ1k8Abaal1Fxa0KgH0cdjeJpy428x9lH4vGkwZUJTe5ynDn-fTqngFeM7YZE2VmlehBbvxFGHru1TfL-v6nT0XVcsZIxEkcoCqxxiiL_a-kzxI5dyf5Tj_0W8H54PiAnsbu5qWxOdDhzAgG8k33uI0YvkADNgEMdzujL2vZyucTIFVXMu5CKOKhmuQK3ZH3AwAtcE_Xc8eYw53YJarDIbWhA-yOJEmk0g-I"/>
+</div>
+<div>
+<h1 class="text-headline-md font-headline-md font-bold tracking-tighter text-on-surface dark:text-on-surface">NYRA</h1>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Premium Knowledge Assistant</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 flex flex-col gap-2">
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 transition-all duration-300 rounded-xl px-4 py-3 flex items-center gap-3 scale-98 active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined text-xl">add</span>
+<span class="font-label-sm text-label-sm">New Chat</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 transition-all duration-300 rounded-xl px-4 py-3 flex items-center gap-3 scale-98 active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined text-xl">history</span>
+<span class="font-label-sm text-label-sm">History</span>
+</a>
+<!-- Active State -->
+<a class="bg-primary-container/30 text-primary font-semibold rounded-xl px-4 py-3 flex items-center gap-3 scale-98 active:scale-95 duration-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">database</span>
+<span class="font-label-sm text-label-sm">Knowledge Base</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 transition-all duration-300 rounded-xl px-4 py-3 flex items-center gap-3 scale-98 active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined text-xl">search</span>
+<span class="font-label-sm text-label-sm">Search</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 transition-all duration-300 rounded-xl px-4 py-3 flex items-center gap-3 scale-98 active:scale-95 duration-200 mt-auto" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+</div>
+<!-- CTA -->
+</nav>
+<!-- TopAppBar (JSON Config) -->
+<header class="fixed top-0 right-0 w-full md:w-[calc(100%-280px)] z-40 bg-transparent flex justify-between items-center h-16 px-container-padding-mobile md:px-8">
+<!-- Mobile Menu Trigger & Brand (Visible only on mobile) -->
+<div class="flex items-center gap-3 md:hidden">
+<button class="text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="text-headline-md font-headline-md font-extrabold text-on-surface">NYRA</span>
+</div>
+<!-- Desktop Navigation Links -->
+<div class="hidden md:flex items-center gap-8 h-full">
+<a class="text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md h-full flex items-center" href="#">Chat</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md h-full flex items-center" href="#">Sources</a>
+<a class="text-primary border-b-2 border-primary h-full flex items-center font-body-md text-body-md font-semibold" href="#">Intelligence</a>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-all opacity-70 hover:opacity-100">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all opacity-70 hover:opacity-100">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="relative z-10 w-full md:ml-[280px] pt-24 pb-20 px-container-padding-mobile md:px-container-padding-desktop min-h-screen flex flex-col gap-10">
+<!-- Page Header -->
+<header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-sweep">
+<div>
+<h2 class="text-display-lg-mobile md:text-display-lg font-display-lg gradient-text">Knowledge Base</h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-2 max-w-xl">
+                    Your personal document management workspace. Upload, organize, and let NYRA synthesize your data.
+                </p>
+</div>
+<button class="px-6 py-3 rounded-full bg-gradient-to-r from-primary to-inverse-primary text-on-primary font-label-sm text-label-sm font-bold flex items-center gap-2 ambient-glow hover:shadow-[0_0_20px_rgba(192,193,255,0.4)] transition-all duration-300 transform hover:-translate-y-0.5">
+<span class="material-symbols-outlined text-lg">upload_file</span>
+                Upload Document
+            </button>
+</header>
+<!-- Analytics Panel -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full animate-sweep delay-100">
+<div class="glass-panel rounded-xl p-4 flex flex-col gap-1">
+<span class="text-on-surface-variant font-label-sm text-label-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">description</span> Total Documents
+</span>
+<span class="text-headline-md font-headline-md text-on-surface">124</span>
+</div>
+<div class="glass-panel rounded-xl p-4 flex flex-col gap-1">
+<span class="text-on-surface-variant font-label-sm text-label-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">auto_stories</span> Total Pages
+</span>
+<span class="text-headline-md font-headline-md text-on-surface">3,492</span>
+</div>
+<div class="glass-panel rounded-xl p-4 flex flex-col gap-1">
+<span class="text-on-surface-variant font-label-sm text-label-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">segment</span> Total Chunks
+</span>
+<span class="text-headline-md font-headline-md text-on-surface">42.8k</span>
+</div>
+<div class="glass-panel rounded-xl p-4 flex flex-col gap-1">
+<span class="text-on-surface-variant font-label-sm text-label-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">storage</span> Indexing Status
+</span>
+<div class="flex items-center gap-2 mt-1">
+<div class="flex-1 h-2 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[98%] rounded-full"></div>
+</div>
+<span class="text-tertiary font-label-sm text-label-sm">98%</span>
+</div>
+</div>
+</section>
+<!-- Dropzone -->
+<section class="w-full h-48 rounded-xl glass-dropzone flex flex-col items-center justify-center cursor-pointer group animate-sweep delay-200" id="upload-dropzone">
+<div class="w-16 h-16 rounded-full bg-surface-variant/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined text-3xl text-primary opacity-80 group-hover:opacity-100">cloud_upload</span>
+</div>
+<p class="text-body-lg font-body-lg text-on-surface-variant group-hover:text-primary transition-colors">
+                Drop your documents here or <span class="text-primary underline underline-offset-4">browse</span>
+</p>
+<p class="text-label-sm font-label-sm text-outline mt-2">Supports PDF, DOCX, TXT up to 50MB</p>
+</section>
+<!-- Document Collections -->
+<div class="flex flex-col gap-8 animate-sweep delay-300">
+<!-- Collection: Semester 1 -->
+<section>
+<h3 class="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">folder</span> Semester 1
+</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Document Card: Ready -->
+<div class="glass-panel rounded-xl p-5 flex flex-col gap-4 glass-panel-hover group relative overflow-hidden transition-all duration-300">
+<!-- Status Indicator -->
+<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-tertiary/20 to-transparent flex justify-end items-start p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="w-2 h-2 rounded-full bg-tertiary animate-pulse-slow"></div>
+</div>
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-variant/50 flex items-center justify-center flex-shrink-0 border border-outline-variant/30">
+<span class="material-symbols-outlined text-tertiary text-2xl" style="font-variation-settings: 'FILL' 1;">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-body-md font-body-md font-semibold text-on-surface truncate">Q4_Financial_Report_Final.pdf</h3>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">2.4 MB • Uploaded 2h ago</p>
+</div>
+</div>
+<!-- Document Health Status -->
+<div class="flex gap-1 mt-1">
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Uploaded"></div>
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Chunked"></div>
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Embedded"></div>
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Indexed"></div>
+</div>
+<div class="flex items-center justify-between mt-2 pt-4 border-t border-white/5">
+<span class="inline-flex items-center gap-1.5 text-tertiary font-label-sm text-label-sm bg-tertiary/10 px-2 py-1 rounded-md">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                        Ready for Chat
+                    </span>
+<!-- Hover Actions -->
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-200">
+<button class="w-8 h-8 rounded-full bg-surface-variant/50 hover:bg-primary/20 hover:text-primary flex items-center justify-center transition-colors text-on-surface-variant" title="View">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-surface-variant/50 hover:bg-error/20 hover:text-error flex items-center justify-center transition-colors text-on-surface-variant" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Document Card: Ready (Another one for grid fill) -->
+<div class="glass-panel rounded-xl p-5 flex flex-col gap-4 glass-panel-hover group relative overflow-hidden transition-all duration-300">
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-variant/50 flex items-center justify-center flex-shrink-0 border border-outline-variant/30">
+<span class="material-symbols-outlined text-tertiary text-2xl" style="font-variation-settings: 'FILL' 1;">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-body-md font-body-md font-semibold text-on-surface truncate">Product_Roadmap_V3.pdf</h3>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">1.1 MB • Uploaded Yesterday</p>
+</div>
+</div>
+<!-- Document Health Status -->
+<div class="flex gap-1 mt-1">
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Uploaded"></div>
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Chunked"></div>
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Embedded"></div>
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Indexed"></div>
+</div>
+<div class="flex items-center justify-between mt-2 pt-4 border-t border-white/5">
+<span class="inline-flex items-center gap-1.5 text-tertiary font-label-sm text-label-sm bg-tertiary/10 px-2 py-1 rounded-md">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                        Ready for Chat
+                    </span>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-200">
+<button class="w-8 h-8 rounded-full bg-surface-variant/50 hover:bg-primary/20 hover:text-primary flex items-center justify-center transition-colors text-on-surface-variant" title="View">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-surface-variant/50 hover:bg-error/20 hover:text-error flex items-center justify-center transition-colors text-on-surface-variant" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Collection: Machine Learning -->
+<section>
+<h3 class="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">folder</span> Machine Learning
+</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Document Card: Processing -->
+<div class="glass-panel rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden">
+<!-- Shimmer Overlay -->
+<div class="absolute inset-0 shimmer-effect opacity-30 pointer-events-none"></div>
+<div class="flex items-start gap-4 relative z-10">
+<div class="w-12 h-12 rounded-lg bg-surface-variant/50 flex items-center justify-center flex-shrink-0 border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary text-2xl animate-pulse">sync</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-body-md font-body-md font-semibold text-on-surface truncate">Market_Analysis_2024.docx</h3>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">15.1 MB • Uploading...</p>
+</div>
+</div>
+<!-- Document Health Status -->
+<div class="flex gap-1 mt-1 relative z-10">
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Uploaded"></div>
+<div class="h-1 flex-1 bg-tertiary rounded-full" title="Chunked"></div>
+<div class="h-1 flex-1 bg-primary animate-pulse rounded-full" title="Embedded"></div>
+<div class="h-1 flex-1 bg-surface-variant rounded-full" title="Indexed"></div>
+</div>
+<div class="mt-2 pt-4 border-t border-white/5 relative z-10">
+<div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/3 rounded-full relative">
+<div class="absolute inset-0 bg-white/20 animate-[shimmer_1s_infinite]"></div>
+</div>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="text-primary font-label-sm text-label-sm animate-pulse">Processing Vectors...</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm">66%</span>
+</div>
+</div>
+</div>
+<!-- Document Card: Failed -->
+<div class="glass-panel rounded-xl p-5 flex flex-col gap-4 glass-panel-hover group relative overflow-hidden transition-all duration-300 border-error/20">
+<div class="absolute top-0 right-0 w-1 h-full bg-error/50"></div>
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-lg bg-error/10 flex items-center justify-center flex-shrink-0 border border-error/20">
+<span class="material-symbols-outlined text-error text-2xl">error</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-body-md font-body-md font-semibold text-on-surface truncate">Encrypted_Archive.zip</h3>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">45 KB • Failed</p>
+</div>
+</div>
+<!-- Document Health Status -->
+<div class="flex gap-1 mt-1">
+<div class="h-1 flex-1 bg-error rounded-full" title="Uploaded"></div>
+<div class="h-1 flex-1 bg-surface-variant rounded-full" title="Chunked"></div>
+<div class="h-1 flex-1 bg-surface-variant rounded-full" title="Embedded"></div>
+<div class="h-1 flex-1 bg-surface-variant rounded-full" title="Indexed"></div>
+</div>
+<div class="flex items-center justify-between mt-2 pt-4 border-t border-white/5">
+<span class="inline-flex items-center gap-1.5 text-error font-label-sm text-label-sm">
+                        Unsupported format
+                    </span>
+<!-- Hover Actions -->
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-200">
+<button class="w-8 h-8 rounded-full bg-surface-variant/50 hover:bg-primary/20 hover:text-primary flex items-center justify-center transition-colors text-on-surface-variant" title="Retry">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-surface-variant/50 hover:bg-error/20 hover:text-error flex items-center justify-center transition-colors text-on-surface-variant" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only Fallback structure if needed by context, suppressed here as requested for generic layouts unless specific, but keeping standard app shell hidden on desktop) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full glass-panel z-50 px-4 py-3 flex justify-between items-center border-t border-outline-variant/10">
+<a class="flex flex-col items-center gap-1 text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined">add</span>
+<span class="text-[10px] font-semibold">New</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary p-2" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">database</span>
+<span class="text-[10px] font-semibold">Knowledge</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="text-[10px] font-semibold">Search</span>
+</a>
+</nav>
+<script>
+        // Simple drag and drop interaction simulation
+        const dropzone = document.getElementById('upload-dropzone');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropzone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropzone.classList.remove('dragover');
+        }
+    </script>
+</body></html>

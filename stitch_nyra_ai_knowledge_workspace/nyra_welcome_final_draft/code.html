@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NYRA | Ask. Retrieve. Understand.</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#23005c",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-container-low": "#1a1b26",
+                      "secondary-container": "#571bc1",
+                      "on-tertiary-fixed-variant": "#004e5a",
+                      "primary-fixed": "#e1e0ff",
+                      "secondary": "#d0bcff",
+                      "error": "#ffb4ab",
+                      "surface-bright": "#383844",
+                      "surface": "#11131d",
+                      "surface-variant": "#333440",
+                      "on-primary-fixed": "#07006c",
+                      "on-surface": "#e2e1f0",
+                      "on-background": "#e2e1f0",
+                      "on-secondary-container": "#c4abff",
+                      "on-secondary-fixed-variant": "#5516be",
+                      "tertiary-container": "#008395",
+                      "inverse-surface": "#e2e1f0",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-primary-container": "#0d0096",
+                      "outline-variant": "#464554",
+                      "on-tertiary-fixed": "#001f25",
+                      "on-primary": "#1000a9",
+                      "surface-container": "#1e1f2a",
+                      "surface-container-lowest": "#0c0d18",
+                      "inverse-primary": "#494bd6",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "surface-dim": "#11131d",
+                      "on-error-container": "#ffdad6",
+                      "surface-container-high": "#282934",
+                      "primary": "#c0c1ff",
+                      "tertiary": "#2fd9f4",
+                      "tertiary-fixed-dim": "#2fd9f4",
+                      "tertiary-fixed": "#a2eeff",
+                      "on-error": "#690005",
+                      "surface-container-highest": "#333440",
+                      "background": "#11131d",
+                      "error-container": "#93000a",
+                      "on-tertiary": "#00363e",
+                      "surface-tint": "#c0c1ff",
+                      "secondary-fixed-dim": "#d0bcff",
+                      "on-tertiary-container": "#000608",
+                      "primary-container": "#8083ff",
+                      "inverse-on-surface": "#2f303b",
+                      "outline": "#908fa0",
+                      "on-secondary": "#3c0091",
+                      "secondary-fixed": "#e9ddff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-padding-desktop": "64px",
+                      "gutter": "24px",
+                      "base": "8px",
+                      "section-gap": "80px",
+                      "container-padding-mobile": "20px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "display-lg-mobile": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "display-lg": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(17, 19, 29, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-panel-elevated {
+            background: rgba(17, 19, 29, 0.6);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.1);
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, #c0c1ff 0%, #2fd9f4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #494bd6 0%, #571bc1 100%);
+        }
+        .particle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.2;
+            pointer-events: none;
+            transition: transform 0.2s ease-out;
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(47, 217, 244, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(47, 217, 244, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(47, 217, 244, 0); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        .lock-on-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lock-on-hover:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 25px rgba(73, 75, 214, 0.4);
+            border-color: rgba(73, 75, 214, 0.5);
+        }
+        @keyframes horizontal-glide {
+            0% {
+                transform: translateX(-150px);
+                filter: blur(15px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                filter: blur(0);
+                opacity: 1;
+            }
+        }
+        .animate-glide-in {
+            animation: horizontal-glide 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background overflow-x-hidden min-h-screen relative font-body-md text-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Atmospheric Background Layers -->
+<div class="fixed inset-0 z-[-2] w-full h-full overflow-hidden">
+<div class="absolute inset-0 bg-background/80 z-10"></div>
+<img alt="Mountain Landscape 1" class="absolute inset-0 object-cover w-full h-full opacity-40 mix-blend-screen scale-110 transform origin-center transition-transform duration-1000 ease-out" id="parallax-bg-1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArDoSkbggo772ahlrj5F3Mu8gTVcLtFPz8yO-5j-JEBBsV8w2gaVWD8AlpgRMm35nU8NCsM1Oc8YJaFnBPACOfs3UVYIoITjB_aksG73xAHrwI3bMTqWCVIy5fLmYnbYHW3zaH3WndFYxQARc_45NEDvqxk_7z2g_hyRo4B6oSuxw8fGNrTEHRJMAcMcsA5gCEWTyX4FHAs3AhnYeo_PAWaiUPPRlrwV0lM78IGuMtGrpK7yQxASijlahZo2FioKlRv24"/>
+<img alt="Mountain Landscape 2" class="absolute inset-0 object-cover w-full h-full opacity-30 mix-blend-overlay scale-110 transform origin-center transition-transform duration-1000 ease-out" id="parallax-bg-2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbmyc1-kFd8ZxvxPFRTbpcgWEDj5blVpDOcx852ZUeXK3FIn77lIaiHWnMWLX1AeSZLp4H9wLIZtxQi5DN42EFIIzW8-IYd2FCpQX5oYHZZxBffTYeiH4VwluFpcGxteolPK0aBgLmNTN2806qWAgXslf77_u-6WVM9XET1JBV_uuY96E-RKCwcdmcxrMQhCi1t7QFABtA2KygBcFsY6ZdOeeZ6SK_RrKyTCSWT9hRQfx_kUddFPVllNcTz19o7nLNrKY"/>
+<!-- Aurora Glows -->
+<div class="absolute top-0 left-1/4 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px] mix-blend-screen -translate-y-1/2 z-10"></div>
+<div class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-tertiary/10 rounded-full blur-[100px] mix-blend-screen translate-y-1/3 z-10"></div>
+</div>
+<!-- Particle Layer -->
+<div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none" id="particles"></div>
+<!-- Top Navigation -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center h-20 px-container-padding-mobile md:px-container-padding-desktop bg-transparent transition-all duration-300 animate-glide-in" id="navbar">
+<div class="flex items-center gap-2 lock-on-hover rounded-xl px-2 py-1 cursor-pointer">
+<!-- Cinematic N Logo -->
+<div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shadow-[0_0_20px_rgba(73,75,214,0.3)]">
+<img alt="NYRA Logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBE-Oe1G0dMmywK-yM0wvxiLFQhykE6Ey9QZyElvVS-89MoP9W9rmaVziMtwJQTh-0PxsvyORti3sl0rTga0IWirlEV90ZONmLr0swk51nos7okEJUblqmyCtVHRqCnQkvcmOvzu_8_HbjyHJdcA5Q1U8H_CVKoM2xMwKd-qRMfZVhmZXogX1X4vFnvngVwK9aTOW85UGMsr1MH5yzHtQYWkpRIPiQ8liJ2H3Ij9ikzJ1MoOz2jWW1fObJmdk6Dvxn8sjA"/>
+</div>
+<span class="font-headline-md text-headline-md font-extrabold tracking-tight hidden md:block">NYRA</span>
+</div>
+<div class="flex items-center gap-6">
+<a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm font-label-sm uppercase tracking-wider hidden md:block lock-on-hover px-3 py-2 rounded-lg" href="#">Product</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm font-label-sm uppercase tracking-wider hidden md:block lock-on-hover px-3 py-2 rounded-lg" href="#">Solutions</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm font-label-sm uppercase tracking-wider hidden md:block lock-on-hover px-3 py-2 rounded-lg" href="#">Pricing</a>
+<button class="text-label-sm font-label-sm font-semibold px-6 py-2.5 rounded-full border border-outline-variant/30 bg-surface-variant/20 hover:bg-surface-variant/50 backdrop-blur-md lock-on-hover">
+                Sign In
+            </button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="relative z-10 pt-32 pb-20 px-container-padding-mobile md:px-container-padding-desktop min-h-screen flex flex-col items-center justify-center animate-glide-in">
+<div class="max-w-4xl mx-auto w-full flex flex-col items-center justify-center gap-12 text-center">
+<!-- Hero Copy -->
+<div class="flex flex-col items-center gap-8 z-20 glass-panel-elevated p-12 rounded-3xl border border-primary/20">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel border-primary/20 text-tertiary text-label-sm font-label-sm uppercase tracking-widest mb-2 animate-pulse-glow lock-on-hover cursor-default">
+<span class="material-symbols-outlined text-[16px]">temp_preferences_custom</span>
+<span>Intelligence Evolved</span>
+</div>
+<h1 class="font-display-lg-mobile text-display-lg-mobile md:font-display-lg md:text-display-lg text-on-surface leading-tight">
+                    Ask. Retrieve.<br/>
+<span class="text-gradient">Understand.</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                    A sentient lens into your data landscape. NYRA transforms scattered knowledge into actionable intelligence through cinematic retrieval and deep reasoning.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4 justify-center">
+<button class="bg-gradient-primary text-white font-label-sm text-label-sm uppercase tracking-wider font-semibold px-8 py-4 rounded-full flex items-center justify-center gap-2 group lock-on-hover">
+                        Start Chat
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<button class="glass-panel text-on-surface font-label-sm text-label-sm uppercase tracking-wider font-semibold px-8 py-4 rounded-full flex items-center justify-center gap-2 border border-outline-variant/30 lock-on-hover">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">explore</span>
+                        Explore Knowledge Base
+                    </button>
+</div>
+</div>
+<!-- Hero Visual / Chat Preview -->
+<div class="w-full relative z-20 perspective-1000 mt-8 max-w-3xl">
+<div class="glass-panel-elevated rounded-2xl p-1 overflow-hidden transform rotate-y-[0deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-700 ease-out shadow-2xl shadow-primary/10 group border-t-primary/20 border-l-primary/20 lock-on-hover">
+<!-- Fake Window Header -->
+<div class="flex items-center gap-2 px-4 py-3 border-b border-outline-variant/10 bg-surface/20">
+<div class="w-3 h-3 rounded-full bg-outline-variant/50"></div>
+<div class="w-3 h-3 rounded-full bg-outline-variant/50"></div>
+<div class="w-3 h-3 rounded-full bg-outline-variant/50"></div>
+<div class="ml-auto text-label-sm font-label-sm text-on-surface-variant/50 font-medium">Secure Session</div>
+</div>
+<!-- Chat Interface -->
+<div class="p-6 flex flex-col gap-6 bg-surface-container-low/30 min-h-[320px] text-left">
+<!-- User Message -->
+<div class="flex items-start gap-4 self-end max-w-[85%]">
+<div class="bg-surface-variant/40 border border-outline-variant/20 rounded-2xl rounded-tr-sm p-4 text-body-md font-body-md text-on-surface backdrop-blur-sm relative overflow-hidden lock-on-hover cursor-default">
+                                Explain this concept using my notes on neural networks.
+                            </div>
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0 border border-on-secondary-container/20 lock-on-hover cursor-default">
+<span class="material-symbols-outlined text-[16px] text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+</div>
+<!-- AI Response -->
+<div class="flex items-start gap-4 max-w-[90%]">
+<div class="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-lg shadow-primary/20 relative lock-on-hover cursor-default">
+<div class="absolute inset-0 rounded-full border border-white/20 z-10 pointer-events-none"></div>
+<img alt="NYRA AI" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZFpqBmp9Q0IvEwQI0YLO1msP2m9pFaeYam2iZh5GouMGbktH1LaE_877pnOp8a6INqSGa6sngvUE_mXps7akfabw-hes3X6HB3efO91IpQyIoo2oVXs-TLrVGjhayp72iRxd9xKHvb2W83TkXFhQF990ih7eaSwFlCSWqPyHgvIvOr8nIcaUl1LM4371ntKxwcgxhPUFnOGuZ8FQHfS4xZCd9R2xH-ZSRRNq_VmqxWbredR_tOxQ5NvnPfIrQbTpPwBw"/>
+</div>
+<div class="flex flex-col gap-3 w-full">
+<div class="text-body-md font-body-md text-on-surface/90 leading-relaxed lock-on-hover p-2 rounded-lg cursor-default border border-transparent">
+                                    Based on your <span class="text-primary font-medium">ML_Notes.pdf</span>, the concept is structured around gradient descent optimization.
+                                </div>
+<!-- Knowledge Chip -->
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-tertiary-container/20 border border-tertiary/30 text-tertiary-fixed font-label-sm text-label-sm w-fit lock-on-hover cursor-pointer">
+<span class="material-symbols-outlined text-[14px]">database</span>
+<span>3 Sources Retrieved</span>
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse ml-1"></span>
+</div>
+<!-- Response Data visualization abstract -->
+<div class="h-16 w-full rounded-lg bg-surface/40 border border-outline-variant/10 mt-2 overflow-hidden relative opacity-70 lock-on-hover cursor-default">
+<div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0wLDUwIFExMDAsMTAgMjAwLDUwIFQ0MDAsNTAgVDYwMCw1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDk0YmQ2IiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')] bg-repeat-x opacity-30 animate-[slide_10s_linear_infinite]"></div>
+<div class="absolute left-0 top-0 bottom-0 w-1/3 bg-gradient-to-r from-surface-container-low/80 to-transparent"></div>
+<div class="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-surface-container-low/80 to-transparent"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Input area -->
+<div class="p-4 border-t border-outline-variant/10 bg-surface/30 relative text-left">
+<div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+<div class="flex items-center gap-3 bg-surface-variant/30 border border-outline-variant/20 rounded-xl px-4 py-3 lock-on-hover cursor-text">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">add_circle</span>
+<div class="h-5 w-px bg-outline-variant/30"></div>
+<span class="text-on-surface-variant/50 font-body-md text-body-md flex-1">Ask NYRA anything...</span>
+<span class="material-symbols-outlined text-primary bg-primary/10 rounded-md p-1 cursor-pointer hover:bg-primary/20 transition-colors">mic</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Subtle Scroll indicator -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50 z-20 lock-on-hover p-2 rounded-lg cursor-pointer animate-glide-in">
+<span class="text-label-sm font-label-sm uppercase tracking-widest text-on-surface-variant">Discover</span>
+<div class="w-px h-12 bg-gradient-to-b from-on-surface-variant to-transparent animate-[pulse_2s_ease-in-out_infinite]"></div>
+</div>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('particles');
+            const bgImage1 = document.getElementById('parallax-bg-1');
+            const bgImage2 = document.getElementById('parallax-bg-2');
+            const particleCount = 30;
+            const particles = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 3 + 1;
+                p.style.width = `${size}px`;
+                p.style.height = `${size}px`;
+                p.style.left = `${Math.random() * 100}vw`;
+                p.style.top = `${Math.random() * 100}vh`;
+                p.dataset.speedX = (Math.random() - 0.5) * 0.5;
+                p.dataset.speedY = (Math.random() - 0.5) * 0.5;
+                container.appendChild(p);
+                particles.push(p);
+            }
+
+            // Mouse parallax for background and particles
+            document.addEventListener('mousemove', (e) => {
+                const mouseX = e.clientX / window.innerWidth - 0.5;
+                const mouseY = e.clientY / window.innerHeight - 0.5;
+
+                // Move background
+                if (bgImage1) {
+                    const bgMoveX = mouseX * -20;
+                    const bgMoveY = mouseY * -20;
+                    bgImage1.style.transform = `scale(1.1) translate(${bgMoveX}px, ${bgMoveY}px)`;
+                }
+                if (bgImage2) {
+                    const bgMoveX = mouseX * -40;
+                    const bgMoveY = mouseY * -40;
+                    bgImage2.style.transform = `scale(1.1) translate(${bgMoveX}px, ${bgMoveY}px)`;
+                }
+
+                // Move particles
+                particles.forEach((p, index) => {
+                    const depth = (index % 5) + 1;
+                    const moveX = mouseX * depth * 20;
+                    const moveY = mouseY * depth * 20;
+                    p.style.transform = `translate(${moveX}px, ${moveY}px)`;
+                });
+            });
+
+            // Navbar blur on scroll
+            window.addEventListener('scroll', () => {
+                const nav = document.getElementById('navbar');
+                if (window.scrollY > 20) {
+                    nav.classList.add('glass-panel', 'border-b', 'border-outline-variant/10');
+                } else {
+                    nav.classList.remove('glass-panel', 'border-b', 'border-outline-variant/10');
+                }
+            });
+        });
+    </script>
+</body></html>

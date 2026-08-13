@@ -1,0 +1,369 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>NYRA - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#23005c",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-container-low": "#1a1b26",
+                      "secondary-container": "#571bc1",
+                      "on-tertiary-fixed-variant": "#004e5a",
+                      "primary-fixed": "#e1e0ff",
+                      "secondary": "#d0bcff",
+                      "error": "#ffb4ab",
+                      "surface-bright": "#383844",
+                      "surface": "#11131d",
+                      "surface-variant": "#333440",
+                      "on-primary-fixed": "#07006c",
+                      "on-surface": "#e2e1f0",
+                      "on-background": "#e2e1f0",
+                      "on-secondary-container": "#c4abff",
+                      "on-secondary-fixed-variant": "#5516be",
+                      "tertiary-container": "#008395",
+                      "inverse-surface": "#e2e1f0",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-primary-container": "#0d0096",
+                      "outline-variant": "#464554",
+                      "on-tertiary-fixed": "#001f25",
+                      "on-primary": "#1000a9",
+                      "surface-container": "#1e1f2a",
+                      "surface-container-lowest": "#0c0d18",
+                      "inverse-primary": "#494bd6",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "surface-dim": "#11131d",
+                      "on-error-container": "#ffdad6",
+                      "surface-container-high": "#282934",
+                      "primary": "#c0c1ff",
+                      "tertiary": "#2fd9f4",
+                      "tertiary-fixed-dim": "#2fd9f4",
+                      "tertiary-fixed": "#a2eeff",
+                      "on-error": "#690005",
+                      "surface-container-highest": "#333440",
+                      "background": "#11131d",
+                      "error-container": "#93000a",
+                      "on-tertiary": "#00363e",
+                      "surface-tint": "#c0c1ff",
+                      "secondary-fixed-dim": "#d0bcff",
+                      "on-tertiary-container": "#000608",
+                      "primary-container": "#8083ff",
+                      "inverse-on-surface": "#2f303b",
+                      "outline": "#908fa0",
+                      "on-secondary": "#3c0091",
+                      "secondary-fixed": "#e9ddff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-padding-desktop": "64px",
+                      "gutter": "24px",
+                      "base": "8px",
+                      "section-gap": "80px",
+                      "container-padding-mobile": "20px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "display-lg-mobile": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "display-lg": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .glass-panel {
+            background: rgba(17, 19, 29, 0.45);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        .input-glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .input-glass:focus-within {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(128, 131, 255, 0.5);
+            box-shadow: 0 0 0 1px rgba(128, 131, 255, 0.5), 0 8px 32px -8px rgba(128, 131, 255, 0.2);
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #8083ff, #571bc1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: all 0.6s ease;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 12px 32px -8px rgba(128, 131, 255, 0.6);
+            letter-spacing: 0.1em;
+        }
+        .btn-gradient:hover::before {
+            left: 100%;
+        }
+        
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .parallax-bg {
+            position: fixed;
+            top: -5%;
+            left: -5%;
+            width: 110%;
+            height: 110%;
+            z-index: 0;
+            background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD095Fc2-EZVlkDG-uuEKk-mRHNdFTMH3uym0U5YgxwyS-T4urNND7mx0srQWTBZlMHOmAeT_1jnQnfV93AzJNjeMgfCgVacLXQUvIhfrJaNOOFY7lwh0BfIGXUc5tU1wLYrfB63RTJmKFQeBBjEHAEqihbx8rkjrdZiI5u0uV-67NlpP6FuOS5H2NeKxgdjueR_5nmD5VIkXdCZixRAczY3pPYKU1HTi2LW0KT0834zCnln4EwL3gwP3hW5WoeXTNW-_8');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: transform 0.1s ease-out;
+            opacity: 0.8;
+            mix-blend-screen;
+        }
+      </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md overflow-hidden selection:bg-primary selection:text-on-primary">
+<div class="parallax-bg" id="parallax-bg"></div>
+<div class="absolute inset-0 z-0 bg-gradient-to-r from-background via-background/80 to-transparent"></div>
+<div id="particles-js"><canvas width="1280" height="1024"></canvas></div>
+<div class="flex h-screen w-full relative z-10">
+<!-- Left Side: Artwork & Branding -->
+<div class="hidden lg:flex w-1/2 relative flex-col justify-between p-container-padding-desktop">
+<div class="relative z-10">
+<div class="w-24 h-24 mb-4 rounded-xl overflow-hidden glass-panel flex items-center justify-center p-2"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1owtDrGiK0eLLr0TiFNNHaZuvX2WhyFxW8q0XM6csuaJeTvZUOHW-0sv9XITQuO8qC31-UYdvXXHJ7gaCZEpZjyR-U0sH8d4pym7yY3-wHcl2eTjwtjBz1x5MFjsJFCFWK4A3-Ld9s9NLGxYvyrRzudMezd2ptn2NMrhuOrKh-5D_QVEa1bZahSL5bXJ5rAROMZ_3-PFnuR7qt1Lwhm6IkpFVT-AY0--f1jDzEQtr361yI64qWV1DUvOjviMQAKyEkag" alt="NYRA Logo" class="w-full h-full object-contain"></div>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2 max-w-md">Premium Knowledge Assistant. Enter the nexus of infinite data.</p>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 text-on-surface-variant/60 font-label-sm text-label-sm uppercase tracking-widest">
+<span class="w-8 h-px bg-on-surface-variant/30"></span>
+                    System Online
+                </div>
+</div>
+</div>
+<!-- Right Side: Authentication -->
+<div class="w-full lg:w-1/2 flex items-center justify-center p-container-padding-mobile lg:p-container-padding-desktop relative z-20">
+<!-- Mobile Branding (Hidden on Desktop) -->
+<div class="absolute top-8 left-8 lg:hidden">
+<div class="w-16 h-16 rounded-lg overflow-hidden glass-panel flex items-center justify-center p-1.5"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0OqKVXHF8cmSgMdKy_a4a4i8v28-zf31elQdXNrSOvB5npHMGcA3j4G8e3L_ZaOAshvHfzoHIYbmXQlZ0sr3nfsKnwQ6j5FrcyK6xhrh0cQ3SIfrRwPrChW82_s7DWMdQHodu7_a-7BHlDxgH3s1XSPRDm9163JClEnUy43pcuqCosUYQLwzJ1EpsP7c7C87T7Cq-a0wlMX6olKgqZIdLorA3BuUtX1EGrMpbIlMKepi8h-S2jVIYtsHCEc1bT4Uq5Yc" alt="NYRA Logo" class="w-full h-full object-contain"></div>
+</div>
+<div class="glass-panel w-full max-w-md rounded-xl p-8 lg:p-10 flex flex-col gap-8">
+<div class="space-y-2"><div class="w-16 h-16 mb-6 rounded-lg overflow-hidden glass-panel flex items-center justify-center p-1.5 mx-auto lg:mx-0"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFGhnK99DHPNTure4Fj01lb9CEBV3Be6ht0VrGxZYOjki4wbW9ilPzRrudp-HI7xj7baypxYBb8rOfMl-epvBjAS0rpEQUSPRAojg52_-qQNjkdbMCgvq_8g6V90Q0PldGdTpNOPF188uez-BLJ1yzVdp8eGOF6DKjIDEPanVJxbWoJgrXDWYvRHxUpe6fbFix_nnxiUp4R2PCenXgwJnGLfoIkObQsSdM01hw92Lv1uokZGX_MDyMhabz0ZGj5tAA-8U" alt="NYRA Logo" class="w-full h-full object-contain"></div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Login to your workspace</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Access your personalized AI knowledge base.</p>
+</div>
+<form class="flex flex-col gap-6" onsubmit="event.preventDefault();">
+<div class="space-y-4">
+<!-- Email Input -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-label-sm text-on-surface-variant block" for="email">Email Address</label>
+<div class="input-glass rounded-lg flex items-center px-4 py-3 group">
+<span class="material-symbols-outlined text-outline-variant group-focus-within:text-primary transition-colors text-[20px] mr-3">mail</span>
+<input class="bg-transparent border-none p-0 w-full text-on-surface placeholder:text-outline-variant focus:ring-0 font-body-md text-body-md" id="email" placeholder="Enter your email" type="email">
+</div>
+</div>
+<!-- Password Input -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-label-sm text-on-surface-variant flex justify-between" for="password">
+                                Password
+                                <a class="text-primary hover:text-primary-fixed transition-colors" href="#">Forgot?</a>
+</label>
+<div class="input-glass rounded-lg flex items-center px-4 py-3 group">
+<span class="material-symbols-outlined text-outline-variant group-focus-within:text-primary transition-colors text-[20px] mr-3">lock</span>
+<input class="bg-transparent border-none p-0 w-full text-on-surface placeholder:text-outline-variant focus:ring-0 font-body-md text-body-md" id="password" placeholder="Enter your password" type="password">
+<button class="text-outline-variant hover:text-on-surface transition-colors focus:outline-none ml-2" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Options -->
+<div class="flex items-center">
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center">
+<input class="peer sr-only" type="checkbox">
+<div class="w-5 h-5 rounded border border-outline-variant bg-surface-container peer-checked:bg-primary peer-checked:border-primary transition-all"></div>
+<span class="material-symbols-outlined absolute text-on-primary text-[16px] opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface-variant group-hover:text-on-surface transition-colors">Remember me</span>
+</label>
+</div>
+<!-- Submit -->
+<button class="btn-gradient w-full py-4 rounded-lg font-label-sm text-label-sm text-white uppercase tracking-widest flex items-center justify-center gap-2 mt-2" type="submit">
+                        Sign In
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</form>
+<div class="text-center mt-4">
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Don't have an account? 
+                        <a class="text-primary hover:text-primary-fixed transition-colors font-semibold" href="#">Request Access</a>
+</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Scripts -->
+<script>
+        // Parallax Effect
+        document.addEventListener('mousemove', (e) => {
+            const bg = document.getElementById('parallax-bg');
+            const mouseX = e.clientX / window.innerWidth;
+            const mouseY = e.clientY / window.innerHeight;
+            
+            const moveX = (mouseX - 0.5) * 30; // 30px max movement
+            const moveY = (mouseY - 0.5) * 30;
+            
+            bg.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        });
+
+        // Particles
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const container = document.getElementById('particles-js');
+            container.appendChild(canvas);
+
+            let particles = [];
+            let w, h;
+
+            function resize() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * w;
+                    this.y = Math.random() * h;
+                    this.size = Math.random() * 1.5 + 0.5;
+                    this.speedX = Math.random() * 0.5 - 0.25;
+                    this.speedY = Math.random() * -0.5 - 0.1; // Float upwards
+                    this.opacity = Math.random() * 0.5 + 0.1;
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    if (this.y < 0) {
+                        this.y = h;
+                        this.x = Math.random() * w;
+                    }
+                }
+                draw() {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            for (let i = 0; i < 50; i++) {
+                particles.push(new Particle());
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, w, h);
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        });
+    </script>
+
+
+</body></html>

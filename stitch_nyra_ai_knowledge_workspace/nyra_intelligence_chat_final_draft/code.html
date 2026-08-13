@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NYRA - Main Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-error-container": "#ffdad6",
+                "on-secondary-container": "#c4abff",
+                "surface": "#11131d",
+                "inverse-on-surface": "#2f303b",
+                "on-background": "#e2e1f0",
+                "tertiary-fixed-dim": "#2fd9f4",
+                "surface-container-low": "#1a1b26",
+                "primary-fixed": "#e1e0ff",
+                "on-tertiary-fixed-variant": "#004e5a",
+                "tertiary": "#2fd9f4",
+                "on-primary-fixed-variant": "#2f2ebe",
+                "inverse-primary": "#494bd6",
+                "tertiary-container": "#008395",
+                "secondary-fixed": "#e9ddff",
+                "on-secondary-fixed-variant": "#5516be",
+                "surface-container-high": "#282934",
+                "surface-bright": "#383844",
+                "outline-variant": "#464554",
+                "surface-container": "#1e1f2a",
+                "on-primary-container": "#0d0096",
+                "on-secondary-fixed": "#23005c",
+                "secondary": "#d0bcff",
+                "secondary-fixed-dim": "#d0bcff",
+                "surface-container-lowest": "#0c0d18",
+                "outline": "#908fa0",
+                "on-surface-variant": "#c7c4d7",
+                "surface-variant": "#333440",
+                "on-tertiary-container": "#000608",
+                "error": "#ffb4ab",
+                "secondary-container": "#571bc1",
+                "primary-fixed-dim": "#c0c1ff",
+                "surface-tint": "#c0c1ff",
+                "on-tertiary": "#00363e",
+                "on-tertiary-fixed": "#001f25",
+                "surface-container-highest": "#333440",
+                "on-primary-fixed": "#07006c",
+                "background": "#11131d",
+                "primary-container": "#8083ff",
+                "tertiary-fixed": "#a2eeff",
+                "on-surface": "#e2e1f0",
+                "on-primary": "#1000a9",
+                "surface-dim": "#11131d",
+                "error-container": "#93000a",
+                "on-error": "#690005",
+                "on-secondary": "#3c0091",
+                "primary": "#c0c1ff",
+                "inverse-surface": "#e2e1f0"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "base": "8px",
+                "section-gap": "80px",
+                "container-padding-desktop": "64px",
+                "container-padding-mobile": "20px",
+                "gutter": "24px"
+        },
+        "fontFamily": {
+                "label-sm": [
+                        "Inter"
+                ],
+                "display-lg": [
+                        "Plus Jakarta Sans"
+                ],
+                "display-lg-mobile": [
+                        "Plus Jakarta Sans"
+                ],
+                "headline-md": [
+                        "Plus Jakarta Sans"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "1",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "1.1",
+                                "letterSpacing": "-0.04em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "display-lg-mobile": [
+                        "32px",
+                        {
+                                "lineHeight": "1.2",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "1.3",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "1.6",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "1.6",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(17, 19, 29, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(17, 19, 29, 0.6);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.1);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .bg-artwork {
+            position: fixed;
+            top: -5%;
+            left: -5%;
+            width: 110vw;
+            height: 110vh;
+            z-index: -1;
+            opacity: 0.7;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(to right, theme('colors.primary'), theme('colors.secondary'));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Hover Lock Effect */
+        .hover-lock {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .hover-lock:hover, .glass-card:hover {
+            transform: scale(1.02);
+            border-color: rgba(192, 193, 255, 0.4);
+            box-shadow: 0 0 25px rgba(73, 75, 214, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        /* Pulse Animation for Knowledge Chips */
+        @keyframes pulse-cyan {
+            0% { box-shadow: 0 0 0 0 rgba(47, 217, 244, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(47, 217, 244, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(47, 217, 244, 0); }
+        }
+        
+        .chip-pulse {
+            animation: pulse-cyan 2s infinite;
+        }
+
+        /* Orbiting Particle */
+        @keyframes orbit {
+            0% { transform: rotate(0deg) translateX(12px) rotate(0deg); }
+            100% { transform: rotate(360deg) translateX(12px) rotate(-360deg); }
+        }
+        
+        .particle-orbiter {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .particle-orbiter::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background-color: theme('colors.tertiary');
+            border-radius: 50%;
+            margin-top: -2px;
+            margin-left: -2px;
+            animation: orbit 1.5s linear infinite;
+        }
+
+        /* Page Transition Motion Blur */
+        .page-transition {
+            animation: slide-in-blur 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
+        }
+
+        @keyframes slide-in-blur {
+            0% {
+                transform: translateX(100px);
+                filter: blur(10px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                filter: blur(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased font-body-md text-body-md h-screen flex overflow-hidden">
+<!-- Background Artwork -->
+<div class="bg-artwork" id="parallax-bg" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCLvKNo8v_W0B7RpQJRKRJS1kJXVfdgUvmmlVxwCGBAAKkw_xrnr8mEbcpZ1RqPOCdXEnt1pfovVG8rAxcYyncVL_UELUr05UurPQBCWvfOZBogXahD9FZUbj75sAWCmjoDpPq8_ehwg_AqTqtNCrvdxd70GnLhJMI7s1TXGjudNQTXNiqDkYfMIG2KlufVw1o3QvEGOmGUm6HS_7c-qjDy9K28_Hu4Faw-pl2FhRANGo272fqLEMa7_8kwMT9ZGJSwY8w'); transform: translate3d(0px, 0px, 0px) scale(1.05);"></div>
+<!-- Top App Bar (Shared Component) -->
+<header class="bg-transparent fixed top-0 right-0 w-full md:w-[calc(100%-280px)] z-40 flex justify-between items-center h-16 px-4 md:px-8">
+<!-- Mobile Menu Trigger & Logo -->
+<div class="flex items-center gap-4 md:hidden">
+<button class="text-on-surface-variant hover:text-primary transition-all hover-lock rounded-lg p-1">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="text-headline-md font-headline-md font-extrabold text-on-surface">NYRA</span>
+</div>
+<!-- Desktop Logo (Hidden as per JSON, but keeping structural flex if needed) -->
+<div class="hidden md:block text-headline-md font-headline-md font-extrabold text-on-surface"></div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-primary border-b-2 border-primary pb-2 font-medium" href="#">Chat</a>
+<a class="text-on-surface-variant hover:text-primary transition-all" href="#">Study</a>
+<a class="text-on-surface-variant hover:text-primary transition-all" href="#">Sources</a>
+<a class="text-on-surface-variant hover:text-primary transition-all" href="#">Intelligence</a>
+</nav>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-all opacity-70 hover:opacity-100 hover-lock rounded-full p-1">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all opacity-70 hover:opacity-100 hover-lock rounded-full p-1">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Side Navigation Bar (Shared Component) -->
+<aside class="hidden md:flex w-[280px] h-screen fixed left-0 top-0 border-r border-outline-variant/10 shadow-2xl shadow-primary/5 bg-surface/40 dark:bg-surface/40 backdrop-blur-xl flex-col p-6 gap-4 z-50">
+<!-- Header -->
+<div class="mb-8 flex items-center gap-4 hover-lock p-2 rounded-xl cursor-pointer">
+<div class="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0">
+<img alt="NYRA Logo" class="w-full h-full object-cover rounded-lg shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCzPiB3vopBqAcGlPb-AklU9DjaiVcgv-hGuo3foT2laqnRUR4gY2LWyX8zGNzIR77tnmW6PSPid35IZhwA6Kjrpwl-rgh8wVWAjhzGffY3L1PLyp1gEpTAp4Nakws4nIfn0JrjgCfLL0u8m8m_6TjebV5j65FMMSqINkm2LX1f38Uy5oIrSrRtivskLQwGx5XXPk5EvWXU7_fX822tj1NI33qRLkDEK2o0_If6SHEYzMalLxNkLJSYyO9SYSzhlPC3Hw"/>
+</div>
+<div>
+<h1 class="text-headline-md font-headline-md font-bold tracking-tighter text-on-surface dark:text-on-surface">NYRA</h1>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Premium Knowledge Assistant</p>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-3 p-3 bg-primary-container/30 text-primary font-semibold rounded-xl hover-lock" href="#">
+<span class="material-symbols-outlined">add</span>
+<span class="text-label-sm font-label-sm">New Chat</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-xl hover-lock" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-label-sm font-label-sm">History</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-xl hover-lock" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="text-label-sm font-label-sm">Knowledge Base</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-xl hover-lock" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="text-label-sm font-label-sm">Search</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-xl hover-lock mt-auto" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-label-sm font-label-sm">Settings</span>
+</a>
+</nav>
+<!-- CTA -->
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 h-full w-full md:ml-[280px] pt-16 flex justify-center relative overflow-hidden page-transition">
+<!-- Chat Container -->
+<div class="w-full max-w-[900px] px-4 md:px-8 flex flex-col h-full relative z-10">
+<!-- Chat Scroll Area -->
+<div class="flex-1 overflow-y-auto pb-40 pt-8 scrollbar-hide flex flex-col gap-8">
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="max-w-[80%] glass-panel hover-lock rounded-2xl rounded-tr-sm p-4 text-on-surface">
+<p class="">Can you summarize the main findings from the latest ML research papers I uploaded, specifically regarding transformer optimization?</p>
+</div>
+</div>
+<!-- AI Response -->
+<div class="flex flex-col w-full gap-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-primary/30 flex items-center justify-center hover-lock">
+<img alt="NYRA Logo" class="w-full h-full object-cover rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoL3dTGzoRQJtZDQUAs-KR2ltDQDYfekLVq2dHDjn7ArpriZCcQX_ZRORM5QVIqikIOfEFhJ4EJWRdsPZqwNWpyyfIftduM46v3nLmBRC9s0bi0SEfnZC2eDUuhXXo6WC-fX7tL3xKA5PBQnuUXkOgFOGd9sFFIWJxqjQV7EbRdqgSj4si_uIHUGRAkBYCz1VZ5JWu9BkEGezdk412gOmrToUWThu5SYwSPAECGuZvA6cMtl40hCwb4D4z-v8pCoxgAAA"/>
+</div>
+<span class="text-headline-md font-headline-md text-sm font-bold gradient-text">NYRA</span>
+</div>
+<div class="max-w-[90%] text-on-surface space-y-6">
+<p class="text-body-lg font-body-lg leading-relaxed">
+                            Based on the documents you provided, there are several key advancements in transformer optimization aimed at reducing computational overhead while maintaining model efficacy.
+                        </p>
+<!-- Sources Display (Glassmorphism Cards) -->
+<div class="mt-6 mb-4">
+<h4 class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">library_books</span>
+                                Sourced Context
+                            </h4>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Source Card 1 -->
+<div class="glass-card p-3 rounded-xl flex items-start gap-3 cursor-pointer group relative overflow-hidden">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-tertiary">description</span>
+</div>
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-on-surface truncate">Machine Learning Notes.pdf</p>
+<p class="text-xs text-on-surface-variant mt-1 truncate">Pages 12-15 • Parameter Pruning</p>
+</div>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<button class="bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-bold px-2 py-1.5 rounded-md backdrop-blur-md border border-primary/30 flex items-center gap-1 hover-lock">
+<span class="material-symbols-outlined text-[12px]">chat</span> Ask NYRA about this
+                                </button>
+</div>
+</div>
+<!-- Source Card 2 -->
+<div class="glass-card p-3 rounded-xl flex items-start gap-3 cursor-pointer group relative overflow-hidden">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-tertiary">description</span>
+</div>
+<div class="overflow-hidden">
+<p class="text-sm font-semibold text-on-surface truncate">Research_Paper_V2.pdf</p>
+<p class="text-xs text-on-surface-variant mt-1 truncate">Section 4.1 • Sparse Attention Mechanisms</p>
+</div>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<button class="bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-bold px-2 py-1.5 rounded-md backdrop-blur-md border border-primary/30 flex items-center gap-1 hover-lock">
+<span class="material-symbols-outlined text-[12px]">chat</span> Ask NYRA about this
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Editorial Content -->
+<h3 class="text-headline-md font-headline-md text-lg mt-6">1. Sparse Attention Mechanisms</h3>
+<p class="">
+                            The `Research_Paper_V2` highlights that replacing dense attention matrices with sparse approximations can reduce time complexity from $O(N^2)$ to $O(N \log N)$. This is crucial for handling long context windows efficiently.
+                        </p>
+<div class="glass-panel hover-lock p-4 rounded-xl font-mono text-sm overflow-x-auto border-l-4 border-l-tertiary my-4">
+<pre class="text-on-surface-variant"><code><span class="text-primary">def</span> <span class="text-tertiary">sparse_attention</span>(Q, K, V, mask):
+    <span class="text-outline"># Simplified representation of block-sparse attention</span>
+    scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
+    scores = scores.masked_fill(mask == 0, -1e9)
+    <span class="text-primary">return</span> torch.matmul(F.softmax(scores, dim=-1), V)</code></pre>
+</div>
+<!-- RAG Confidence -->
+<div class="flex items-center gap-3 mt-6 pt-4 border-t border-outline-variant/20 hover-lock rounded-lg p-2 -ml-2 cursor-default w-max">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
+<span class="text-label-sm font-label-sm text-on-surface font-medium">High Confidence</span>
+</div>
+<span class="text-on-surface-variant text-label-sm">•</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Answer grounded in 2 sources</span>
+</div>
+<!-- Quick AI Actions -->
+<div class="flex overflow-x-auto gap-2 mt-4 pb-4 pt-2 scrollbar-hide w-full max-w-full">
+<button class="hover-lock px-4 py-2 rounded-xl bg-surface-container-low/80 backdrop-blur-md hover:bg-surface-container border border-outline-variant/30 text-label-sm font-label-sm text-on-surface transition-colors whitespace-nowrap flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">psychology</span> Explain simpler
+                            </button>
+<button class="hover-lock px-4 py-2 rounded-xl bg-surface-container-low/80 backdrop-blur-md hover:bg-surface-container border border-outline-variant/30 text-label-sm font-label-sm text-on-surface transition-colors whitespace-nowrap flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">summarize</span> Summarize
+                            </button>
+<button class="hover-lock px-4 py-2 rounded-xl bg-surface-container-low/80 backdrop-blur-md hover:bg-surface-container border border-outline-variant/30 text-label-sm font-label-sm text-on-surface transition-colors whitespace-nowrap flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">edit_note</span> Make notes
+                            </button>
+<button class="hover-lock px-4 py-2 rounded-xl bg-surface-container-low/80 backdrop-blur-md hover:bg-surface-container border border-outline-variant/30 text-label-sm font-label-sm text-on-surface transition-colors whitespace-nowrap flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">quiz</span> Create quiz
+                            </button>
+</div>
+</div>
+</div>
+<!-- Thinking State -->
+<div class="flex items-center gap-3 mt-4 opacity-70">
+<div class="particle-orbiter w-6 h-6 flex items-center justify-center rounded-full bg-surface-container-high border border-outline-variant/30 hover-lock">
+<span class="material-symbols-outlined text-tertiary text-[14px]">search</span>
+</div>
+<span class="text-label-sm font-label-sm text-tertiary animate-pulse">NYRA is retrieving sources...</span>
+</div>
+<!-- Bottom Padding for fixed composer -->
+<div class="h-8"></div>
+</div>
+<!-- Composer (Floating Glass Container) -->
+<div class="absolute bottom-8 left-4 right-4 md:left-8 md:right-8 z-20">
+<div class="glass-card rounded-2xl p-2 flex flex-col gap-2">
+<!-- Context Chips Area & Scope Selector -->
+<div class="px-3 pt-2 pb-1 flex justify-between items-center">
+<div class="flex items-center gap-2">
+<!-- Scope Selector -->
+<button class="hover-lock flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/20 text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 transition-all">
+<span class="material-symbols-outlined text-[16px]">folder_open</span>
+<span class="">All Documents</span>
+<span class="material-symbols-outlined text-[16px]">arrow_drop_down</span>
+</button>
+</div>
+<div class="px-3 py-1 rounded-full bg-tertiary/10 border border-tertiary/30 text-tertiary text-[10px] font-semibold tracking-wide flex items-center gap-1 chip-pulse hover-lock cursor-default">
+<span class="material-symbols-outlined text-[12px]">library_books</span>
+                            RAG Active
+                        </div>
+</div>
+<div class="flex items-end gap-2 px-2 pb-1">
+<button class="hover-lock w-10 h-10 rounded-xl hover:bg-surface-container transition-colors flex items-center justify-center text-on-surface-variant hover:text-primary shrink-0">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<div class="flex-1 min-h-[44px] bg-transparent flex items-center">
+<textarea class="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant resize-none focus:ring-0 max-h-32 overflow-y-auto text-body-md py-3" placeholder="Message NYRA..." rows="1"></textarea>
+</div>
+<button class="hover-lock w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center hover:bg-primary-container transition-colors shrink-0 mb-1">
+<span class="material-symbols-outlined">arrow_upward</span>
+</button>
+</div>
+</div>
+<div class="text-center mt-3 text-[10px] text-on-surface-variant/50">
+                    AI models can make mistakes. Verify important information.
+                </div>
+</div>
+</div>
+</main>
+<script>
+        // Smooth motion-sensitive parallax effect for background
+        let targetX = 0;
+        let targetY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        
+        document.addEventListener('mousemove', (e) => {
+            targetX = (e.clientX / window.innerWidth - 0.5) * 30; // Increased range for effect
+            targetY = (e.clientY / window.innerHeight - 0.5) * 30;
+        });
+
+        function animateParallax() {
+            currentX += (targetX - currentX) * 0.1; // Smooth lerping
+            currentY += (targetY - currentY) * 0.1;
+            
+            const bg = document.getElementById('parallax-bg');
+            if(bg) {
+                bg.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) scale(1.05)`;
+            }
+            requestAnimationFrame(animateParallax);
+        }
+        
+        animateParallax();
+
+        // Auto-resize textarea
+        const textarea = document.querySelector('textarea');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if (this.scrollHeight > 128) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+        });
+    </script>
+</body></html>
