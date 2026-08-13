@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
+from uuid import UUID
 
 from app.db.database import get_db
 from app.db.models.user import User
@@ -13,11 +14,11 @@ router = APIRouter()
 
 class ChatMessageRequest(BaseModel):
     message: str
-    session_id: Optional[int] = None
+    session_id: Optional[UUID] = None
     filters: Optional[dict] = None
 
 class Source(BaseModel):
-    document_id: Optional[int]
+    document_id: Optional[str]
     source: Optional[str]
     page: Optional[int]
     content: str
@@ -26,7 +27,7 @@ class ChatMessageResponse(BaseModel):
     answer: str
     sources: List[Source]
     confidence: str
-    session_id: Optional[int]
+    session_id: Optional[UUID]
 
 @router.post("/", response_model=ChatMessageResponse)
 @limiter.limit("60/minute")
@@ -43,7 +44,12 @@ def send_message(
     
     # Get or create session
     session_id = chat_request.session_id
-    if not session_id:
+    if session_id:
+        # Verify the session belongs to the current user (BOLA/IDOR protection)
+        session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id).first()
+        if not session:
+            raise HTTPException(status_code=403, detail="Not authorized to access this session")
+    else:
         new_session = ChatSession(user_id=current_user.id, title="NYRA Chat")
         db.add(new_session)
         db.commit()
@@ -59,7 +65,8 @@ def send_message(
     db.add(db_user_msg)
     db.commit()
         
-    config = {"configurable": {"thread_id": str(session_id)}}
+    doc_id = chat_request.filters.get("document_id") if chat_request.filters else None
+    config = {"configurable": {"thread_id": str(session_id), "document_id": str(doc_id) if doc_id else None}}
     
     try:
         # Run graph
@@ -97,8 +104,9 @@ def send_message(
                                 page=src.get("page"),
                                 content=""
                             ))
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Failed to parse tool message sources: {e}")
         
         # Log AI message to relational DB for frontend history
         db_ai_msg = ChatMessage(
@@ -117,6 +125,11 @@ def send_message(
             session_id=session_id
         )
     except Exception as e:
+        import traceback
+        with open("error_log.txt", "a") as f:
+            f.write("ERROR IN CHAT API:\n")
+            f.write(traceback.format_exc())
+            f.write("\n\n")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/history")
@@ -142,8 +155,9 @@ def get_session_messages(session_id: int, db: Session = Depends(get_db), current
         if msg.sources:
             try:
                 sources_list = json.loads(msg.sources)
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.warning(f"Failed to parse chat message sources: {e}")
                 
         result.append({
             "id": msg.id,

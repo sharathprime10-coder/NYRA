@@ -312,6 +312,7 @@ const Chat: React.FC = () => {
                 ref={fileInputRef} 
                 className="hidden" 
                 onChange={handleFileUpload} 
+                accept=".pdf,.txt,.docx,.jpg,.jpeg,.png,.webp"
               />
               <button 
                 onClick={() => fileInputRef.current?.click()}

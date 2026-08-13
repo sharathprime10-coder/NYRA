@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from app.db.database import Base, engine
 from app.db.models import user, document, chat
 from app.api.endpoints import chat as chat_router
@@ -7,6 +9,7 @@ from app.api.endpoints import auth as auth_router
 from app.api.endpoints import documents as documents_router
 from slowapi.errors import RateLimitExceeded
 from app.core.rate_limit import limiter, _rate_limit_exceeded_handler
+
 # Create tables (for local dev)
 Base.metadata.create_all(bind=engine)
 

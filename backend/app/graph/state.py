@@ -10,7 +10,9 @@ class NYRAState(TypedDict):
     # Metadata for the current execution
     user_id: Optional[int]
     session_id: Optional[int]
+    document_id: Optional[str]
     
     # Multi-Agent State
     sender: Optional[str]
     draft: Optional[str]
+    next_node: Optional[str]

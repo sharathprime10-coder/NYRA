@@ -56,16 +56,22 @@ def _extract_text_with_gemini(file_path: str) -> str:
         except Exception as e:
             print(f"Failed to delete Gemini file {uploaded_file.name}: {e}")
 
-def process_and_store_document(file_path: str, document_id: int):
-    """Loads a PDF, chunks it, and stores embeddings in ChromaDB."""
-    loader = PyPDFLoader(file_path)
-    docs = loader.load()
-    
+def process_and_store_document(file_path: str, document_id: str):
+    """Loads a file, chunks it, and stores embeddings in ChromaDB."""
+    chunks = []
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
     )
-    chunks = text_splitter.split_documents(docs)
+    
+    try:
+        # We try PyPDFLoader first. If it's an image or other format, this will throw an exception.
+        loader = PyPDFLoader(file_path)
+        docs = loader.load()
+        chunks = text_splitter.split_documents(docs)
+    except Exception as e:
+        print(f"Native PDF extraction skipped/failed for {file_path}: {e}")
+
     
     # Fallback to Gemini OCR if PyPDFLoader yields no text
     if not chunks:
@@ -124,7 +130,7 @@ def query_knowledge_base(query: str, filters: dict = None):
         "confidence": confidence
     }
 
-def delete_document_from_index(document_id: int):
+def delete_document_from_index(document_id: str):
     """Deletes all chunks associated with a document_id from Chroma."""
     try:
         vector_store._collection.delete(where={"document_id": document_id})

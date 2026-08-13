@@ -11,14 +11,17 @@ from app.core.config import settings
 from app.graph.state import NYRAState
 from app.tools.registry import get_all_tools
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from app.core.llm_factory import get_robust_llm, get_writer_llm, get_critic_llm, get_frontier_llm
 import os
 
 os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
+if settings.GROQ_API_KEY:
+    os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
 # Initialize the LLMs
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0.2)
-llm_writer = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0.7) # more creative
-llm_critic = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0.0) # strict
+llm = get_frontier_llm() # Supervisor & Researcher (complex routing and tool use)
+llm_writer = get_writer_llm() # Writer (expressive, fast drafting)
+llm_critic = get_critic_llm() # Critic (deep reasoning to catch hallucinations)
 
 # Data Models for Routing
 class Router(BaseModel):

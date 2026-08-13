@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -10,6 +10,8 @@ from app.core.security import create_access_token, get_password_hash, verify_pas
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from app.core.config import settings
+from app.core.rate_limit import limiter
+
 router = APIRouter()
 
 class UserCreate(BaseModel):
@@ -35,7 +37,8 @@ class UserProfile(BaseModel):
         from_attributes = True
 
 @router.post("/signup", response_model=Token)
-def signup(user_data: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def signup(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     # Check if user exists
     existing_user = db.query(User).filter(User.username == user_data.email).first()
     if existing_user:
@@ -62,7 +65,8 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     )
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # Find user
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.password_hash):
@@ -103,12 +107,13 @@ class GoogleLoginRequest(BaseModel):
     credential: str
 
 @router.post("/google", response_model=Token)
-def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def google_login(request: Request, login_request: GoogleLoginRequest, db: Session = Depends(get_db)):
     import logging
     try:
         client_id = settings.GOOGLE_CLIENT_ID.strip() if settings.GOOGLE_CLIENT_ID else ""
         idinfo = id_token.verify_oauth2_token(
-            request.credential, 
+            login_request.credential, 
             google_requests.Request(), 
             client_id,
             clock_skew_in_seconds=10

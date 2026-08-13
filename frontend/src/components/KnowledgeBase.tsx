@@ -82,7 +82,7 @@ const KnowledgeBase: React.FC = () => {
               ref={fileInputRef} 
               style={{ display: 'none' }} 
               onChange={handleFileChange} 
-              accept=".pdf,.txt,.docx"
+              accept=".pdf,.txt,.docx,.jpg,.jpeg,.png,.webp"
             />
             <button 
               onClick={handleUploadClick}
@@ -144,7 +144,7 @@ const KnowledgeBase: React.FC = () => {
                 <>Drop your documents here or <span className="text-primary underline underline-offset-4">browse</span></>
               )}
             </p>
-            <p className="font-label text-xs text-outline mt-2">Supports PDF, DOCX, TXT up to 50MB</p>
+            <p className="font-label text-xs text-outline mt-2">Supports PDF, DOCX, TXT, Images up to 50MB</p>
           </section>
 
           {/* Document Collections */}

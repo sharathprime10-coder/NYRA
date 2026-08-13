@@ -44,8 +44,10 @@ def get_all_tools() -> List[BaseTool]:
     return local_tools + mcp_tools
 
 
+from langchain_core.runnables import RunnableConfig
+
 @tool
-def rag_tool(query: str, thread_id: str = None) -> dict:
+def rag_tool(query: str, config: RunnableConfig) -> dict:
     """
     Retrieve relevant information from the knowledge base for this chat thread.
     Use this tool when the user asks a factual question that you don't know the answer to, 
@@ -53,11 +55,11 @@ def rag_tool(query: str, thread_id: str = None) -> dict:
     """
     from app.services.rag_service import query_knowledge_base
     
-    # In a full multi-tenant system, we would filter by user_id or thread_id
-    # For now, we just query the global knowledge base
-    # e.g., filters = {"thread_id": thread_id}
+    document_id = config.get("configurable", {}).get("document_id")
+    filters = {"document_id": document_id} if document_id else None
+    
     try:
-        res = query_knowledge_base(query)
+        res = query_knowledge_base(query, filters=filters)
         return {
             "context": [source["content"] for source in res["sources"]],
             "sources": [{"filename": source["source"], "page": source["page"]} for source in res["sources"]]

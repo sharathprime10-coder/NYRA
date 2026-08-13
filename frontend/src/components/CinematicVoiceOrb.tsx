@@ -127,7 +127,7 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
         speak("Hello. How can I help you?", () => {
           setOrbState('listening');
         });
-      }, 1500);
+      }, 300);
 
     } catch (e) {
       console.error("Initialization error in VoiceOrb:", e);
@@ -207,11 +207,9 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
 
   const handleProcessQuery = async (text: string) => {
     setOrbState('processing');
-    speak("Processing your request.");
     
     try {
-      const savedVoiceName = localStorage.getItem('nyra_voice') || '';
-      const languageHint = savedVoiceName ? `\n\n[System Instruction: You are responding via Text-to-Speech using the voice model "${savedVoiceName}". You MUST reply entirely in the primary language associated with this voice model (e.g., if it is a Korean voice, reply entirely in Korean). Do not use English unless necessary.]` : '';
+      const languageHint = `\n\n[System Instruction: You are responding via Text-to-Speech. Keep your answer concise and conversational.]`;
 
       const res = await api.post('/api/chat/', {
         message: text + languageHint,

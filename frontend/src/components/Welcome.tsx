@@ -3,12 +3,13 @@ import { ArrowRight, Compass, Settings, Database, PlusCircle, Mic } from 'lucide
 import { Link } from 'react-router-dom';
 import TiltCard from './common/TiltCard';
 import FluidBackground from './common/FluidBackground';
-
+import { useAuth } from '../context/AuthContext';
 const Welcome: React.FC = () => {
   const bg1Ref = useRef<HTMLImageElement>(null);
   const bg2Ref = useRef<HTMLImageElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Parallax logic
@@ -81,14 +82,23 @@ const Welcome: React.FC = () => {
       <nav className={`fixed top-0 left-0 w-full z-50 flex justify-between items-center h-20 px-[20px] md:px-[64px] transition-all duration-300 animate-glide-in ${scrolled ? 'glass-panel border-b border-outline-variant/10' : 'bg-transparent'}`}>
         <div className="flex items-center gap-2 lock-on-hover rounded-xl px-2 py-1 cursor-pointer">
           <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shadow-[0_0_20px_rgba(73,75,214,0.3)] bg-surface-container">
-            <img alt="NYRA Logo" className="w-8 h-8 object-contain" src="/logo.png" />
+            <img alt="NYRA Logo" className="w-8 h-8 object-contain rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1owtDrGiK0eLLr0TiFNNHaZuvX2WhyFxW8q0XM6csuaJeTvZUOHW-0sv9XITQuO8qC31-UYdvXXHJ7gaCZEpZjyR-U0sH8d4pym7yY3-wHcl2eTjwtjBz1x5MFjsJFCFWK4A3-Ld9s9NLGxYvyrRzudMezd2ptn2NMrhuOrKh-5D_QVEa1bZahSL5bXJ5rAROMZ_3-PFnuR7qt1Lwhm6IkpFVT-AY0--f1jDzEQtr361yI64qWV1DUvOjviMQAKyEkag" />
           </div>
           <span className="font-display text-2xl font-extrabold tracking-tight hidden md:block">NYRA</span>
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/login" className="text-xs font-label font-semibold px-6 py-2.5 rounded-full border border-outline-variant/30 bg-surface-variant/20 hover:bg-surface-variant/50 backdrop-blur-md lock-on-hover">
-            Sign In
-          </Link>
+          {user ? (
+            <Link to="/chat" className="text-xs font-label font-semibold px-6 py-2.5 rounded-full border border-outline-variant/30 bg-surface-variant/20 hover:bg-surface-variant/50 backdrop-blur-md lock-on-hover flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full overflow-hidden bg-primary/20">
+                {user.avatar_url && <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />}
+              </div>
+              Go to Dashboard
+            </Link>
+          ) : (
+            <Link to="/login" className="text-xs font-label font-semibold px-6 py-2.5 rounded-full border border-outline-variant/30 bg-surface-variant/20 hover:bg-surface-variant/50 backdrop-blur-md lock-on-hover">
+              Sign In
+            </Link>
+          )}
         </div>
       </nav>
 

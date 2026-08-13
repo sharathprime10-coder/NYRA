@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
+    GROQ_API_KEY: str = ""
+    HUGGINGFACE_API_KEY: str = ""
+    CEREBRAS_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
+    NVIDIA_API_KEY: str = ""
+    
     class Config:
         env_file = ".env"
 
