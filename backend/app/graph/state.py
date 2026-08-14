@@ -16,3 +16,5 @@ class NYRAState(TypedDict):
     sender: Optional[str]
     draft: Optional[str]
     next_node: Optional[str]
+    error_retries: Optional[int]
+    critic_attempts: Optional[int]

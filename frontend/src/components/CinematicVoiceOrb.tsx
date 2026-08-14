@@ -76,7 +76,18 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = 'en-US';
+        
+        // Match recognition language to the selected TTS voice
+        const savedVoiceName = localStorage.getItem('nyra_voice');
+        let targetLang = 'en-US';
+        if (synth && savedVoiceName) {
+            const voices = synth.getVoices();
+            const foundVoice = voices.find((v: any) => v.name === savedVoiceName);
+            if (foundVoice) {
+                targetLang = foundVoice.lang;
+            }
+        }
+        recognitionRef.current.lang = targetLang;
 
         recognitionRef.current.onresult = (event: any) => {
           if (orbStateRef.current !== 'listening') return;
@@ -209,7 +220,8 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
     setOrbState('processing');
     
     try {
-      const languageHint = `\n\n[System Instruction: You are responding via Text-to-Speech. Keep your answer concise and conversational.]`;
+      const savedVoiceName = localStorage.getItem('nyra_voice') || 'Default';
+      const languageHint = `\n\n[System Instruction: You are responding via Text-to-Speech. The user's voice setting is '${savedVoiceName}'. You MUST respond in the appropriate language for this voice. Keep your answer concise and conversational.]`;
 
       const res = await api.post('/api/chat/', {
         message: text + languageHint,

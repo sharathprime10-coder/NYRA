@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ChatLayout from './layout/ChatLayout';
-import { FolderOpen, ChevronDown, Paperclip, ArrowUp, Search, MessageSquare, BookOpen, FileText, Mic } from 'lucide-react';
+import { FolderOpen, ChevronDown, Paperclip, ArrowUp, Search, MessageSquare, BookOpen, FileText, Mic, Zap, Brain, BrainCircuit } from 'lucide-react';
 import CinematicVoiceOrb from './CinematicVoiceOrb';
 import { AnimatePresence } from 'framer-motion';
 import api from '../api/client';
@@ -38,6 +38,8 @@ const Chat: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | 'all'>('all');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [thinkingLevel, setThinkingLevel] = useState<'low' | 'medium' | 'high'>('medium');
+  const [isThinkingDropdownOpen, setIsThinkingDropdownOpen] = useState(false);
   const { sessionId: routeSessionId } = useParams();
 
   useEffect(() => {
@@ -109,7 +111,8 @@ const Chat: React.FC = () => {
       const res = await api.post('/api/chat/', {
         message: userMessage.content,
         session_id: sessionId,
-        filters: selectedDocumentId === 'all' ? undefined : { document_id: selectedDocumentId }
+        filters: selectedDocumentId === 'all' ? undefined : { document_id: selectedDocumentId },
+        thinking_level: thinkingLevel
       });
       
       const aiMessage: ChatMessage = {
@@ -273,35 +276,88 @@ const Chat: React.FC = () => {
             {/* Context Chips Area & Scope Selector */}
             <div className="px-3 pt-2 pb-1 flex justify-between items-center relative">
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="hover-lock flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/20 font-label text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 transition-all">
-                  <FolderOpen className="w-4 h-4" />
-                  <span className="max-w-[150px] truncate">
-                    {selectedDocumentId === 'all' ? 'All Documents' : documents.find(d => d.id === selectedDocumentId)?.filename || 'Document'}
-                  </span>
-                  <ChevronDown className="w-4 h-4" />
-                </button>
+                
+                {/* Document Selector */}
+                <div className="relative">
+                  <button 
+                    onClick={() => { setIsDropdownOpen(!isDropdownOpen); setIsThinkingDropdownOpen(false); }}
+                    className="hover-lock flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/20 font-label text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 transition-all">
+                    <FolderOpen className="w-4 h-4" />
+                    <span className="max-w-[150px] truncate">
+                      {selectedDocumentId === 'all' ? 'All Documents' : documents.find(d => d.id === selectedDocumentId)?.filename || 'Document'}
+                    </span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
 
-                {isDropdownOpen && (
-                  <div className="absolute bottom-full left-3 mb-2 bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl overflow-hidden z-50 min-w-[200px] max-h-48 overflow-y-auto">
-                    <button 
-                      onClick={() => { setSelectedDocumentId('all'); setIsDropdownOpen(false); }}
-                      className={`w-full text-left px-4 py-2 text-xs font-label hover:bg-primary/10 transition-colors ${selectedDocumentId === 'all' ? 'text-primary' : 'text-on-surface'}`}
-                    >
-                      All Documents
-                    </button>
-                    {documents.map(doc => (
+                  {isDropdownOpen && (
+                    <div className="absolute bottom-full left-0 mb-2 bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl overflow-hidden z-50 min-w-[200px] max-h-48 overflow-y-auto">
                       <button 
-                        key={doc.id}
-                        onClick={() => { setSelectedDocumentId(doc.id); setIsDropdownOpen(false); }}
-                        className={`w-full text-left px-4 py-2 text-xs font-label hover:bg-primary/10 transition-colors truncate ${selectedDocumentId === doc.id ? 'text-primary' : 'text-on-surface'}`}
+                        onClick={() => { setSelectedDocumentId('all'); setIsDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-2 text-xs font-label hover:bg-primary/10 transition-colors ${selectedDocumentId === 'all' ? 'text-primary' : 'text-on-surface'}`}
                       >
-                        {doc.filename}
+                        All Documents
                       </button>
-                    ))}
-                  </div>
-                )}
+                      {documents.map(doc => (
+                        <button 
+                          key={doc.id}
+                          onClick={() => { setSelectedDocumentId(doc.id); setIsDropdownOpen(false); }}
+                          className={`w-full text-left px-4 py-2 text-xs font-label hover:bg-primary/10 transition-colors truncate ${selectedDocumentId === doc.id ? 'text-primary' : 'text-on-surface'}`}
+                        >
+                          {doc.filename}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Thinking Level Selector */}
+                <div className="relative">
+                  <button 
+                    onClick={() => { setIsThinkingDropdownOpen(!isThinkingDropdownOpen); setIsDropdownOpen(false); }}
+                    className="hover-lock flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/20 font-label text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 transition-all"
+                    title="Select NYRA's Thinking Level"
+                  >
+                    {thinkingLevel === 'low' ? <Zap className="w-4 h-4 text-amber-400" /> : thinkingLevel === 'medium' ? <Brain className="w-4 h-4 text-primary" /> : <BrainCircuit className="w-4 h-4 text-emerald-400" />}
+                    <span className="capitalize">{thinkingLevel}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {isThinkingDropdownOpen && (
+                    <div className="absolute bottom-full left-0 mb-2 bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl overflow-hidden z-50 w-56">
+                      <button 
+                        onClick={() => { setThinkingLevel('low'); setIsThinkingDropdownOpen(false); }}
+                        className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-primary/10 transition-colors ${thinkingLevel === 'low' ? 'bg-primary/5' : ''}`}
+                      >
+                        <Zap className="w-4 h-4 mt-0.5 text-amber-400 shrink-0" />
+                        <div>
+                          <p className={`text-xs font-bold ${thinkingLevel === 'low' ? 'text-primary' : 'text-on-surface'}`}>Low / Fast</p>
+                          <p className="text-[10px] text-on-surface-variant leading-tight mt-1">Quickest responses, bypasses deep reasoning to save tokens.</p>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => { setThinkingLevel('medium'); setIsThinkingDropdownOpen(false); }}
+                        className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-primary/10 transition-colors border-t border-outline-variant/20 ${thinkingLevel === 'medium' ? 'bg-primary/5' : ''}`}
+                      >
+                        <Brain className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                        <div>
+                          <p className={`text-xs font-bold ${thinkingLevel === 'medium' ? 'text-primary' : 'text-on-surface'}`}>Medium</p>
+                          <p className="text-[10px] text-on-surface-variant leading-tight mt-1">Balanced. Uses multi-agent graph with one verification pass.</p>
+                        </div>
+                      </button>
+                      <button 
+                        onClick={() => { setThinkingLevel('high'); setIsThinkingDropdownOpen(false); }}
+                        className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-primary/10 transition-colors border-t border-outline-variant/20 ${thinkingLevel === 'high' ? 'bg-primary/5' : ''}`}
+                      >
+                        <BrainCircuit className="w-4 h-4 mt-0.5 text-emerald-400 shrink-0" />
+                        <div>
+                          <p className={`text-xs font-bold ${thinkingLevel === 'high' ? 'text-primary' : 'text-on-surface'}`}>High / Deep</p>
+                          <p className="text-[10px] text-on-surface-variant leading-tight mt-1">Deep reasoning. Will loop up to 3 times to ensure no hallucinations.</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
             

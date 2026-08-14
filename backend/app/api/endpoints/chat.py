@@ -16,6 +16,7 @@ class ChatMessageRequest(BaseModel):
     message: str
     session_id: Optional[UUID] = None
     filters: Optional[dict] = None
+    thinking_level: str = "medium"
 
 class Source(BaseModel):
     document_id: Optional[str]
@@ -27,7 +28,7 @@ class ChatMessageResponse(BaseModel):
     answer: str
     sources: List[Source]
     confidence: str
-    session_id: Optional[UUID]
+    session_id: Optional[str]
 
 @router.post("/", response_model=ChatMessageResponse)
 @limiter.limit("60/minute")
@@ -38,7 +39,7 @@ def send_message(
     current_user: User = Depends(get_current_user)
 ):
     from app.graph.graph import nyra_graph
-    from langchain_core.messages import HumanMessage, ToolMessage
+    from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage
     from app.db.models.chat import ChatSession, ChatMessage
     import json
     
@@ -56,6 +57,18 @@ def send_message(
         db.refresh(new_session)
         session_id = new_session.id
     
+    # Get message history
+    history = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at).all()
+    input_messages = []
+    for msg in history:
+        if msg.role == "user":
+            input_messages.append(HumanMessage(content=msg.content))
+        elif msg.role == "ai":
+            input_messages.append(AIMessage(content=msg.content))
+
+    # Append new user message
+    input_messages.append(HumanMessage(content=chat_request.message))
+    
     # Log user message to relational DB for frontend history
     db_user_msg = ChatMessage(
         session_id=session_id,
@@ -64,15 +77,28 @@ def send_message(
     )
     db.add(db_user_msg)
     db.commit()
-        
+    
     doc_id = chat_request.filters.get("document_id") if chat_request.filters else None
-    config = {"configurable": {"thread_id": str(session_id), "document_id": str(doc_id) if doc_id else None}}
+    if doc_id:
+        from app.db.models.document import Document
+        doc = db.query(Document).filter(Document.id == doc_id).first()
+        if doc:
+            sys_msg = SystemMessage(content=f"Context: The user has attached a document named '{doc.filename}' for this specific query. If the user refers to 'this document', 'the PDF', or similar, they are referring to '{doc.filename}'. Use the rag_tool to read it.")
+            input_messages.append(sys_msg)
+
+    config = {
+        "configurable": {
+            "thread_id": str(session_id),
+            "filters": chat_request.filters,
+            "thinking_level": chat_request.thinking_level
+        }
+    }
     
     try:
         # Run graph
         result = nyra_graph.invoke(
             {
-                "messages": [HumanMessage(content=chat_request.message)],
+                "messages": input_messages,
                 "user_id": current_user.id
             }, 
             config=config
@@ -122,7 +148,7 @@ def send_message(
             answer=final_message,
             sources=sources,
             confidence=confidence,
-            session_id=session_id
+            session_id=str(session_id) if session_id else None
         )
     except Exception as e:
         import traceback
