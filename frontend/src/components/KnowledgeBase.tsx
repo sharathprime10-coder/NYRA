@@ -20,9 +20,6 @@ const KnowledgeBase: React.FC = () => {
 
   useEffect(() => {
     fetchDocuments();
-    // Poll for document status updates every 5 seconds
-    const interval = setInterval(fetchDocuments, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleUploadClick = () => {

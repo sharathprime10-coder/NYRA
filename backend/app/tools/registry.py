@@ -35,13 +35,9 @@ from langchain_community.tools import DuckDuckGoSearchRun
 web_search_tool = DuckDuckGoSearchRun(region="us-en")
 
 def get_all_tools() -> List[BaseTool]:
-    """Returns a list of all tools registered in NYRA."""
-    from app.tools.mcp_client import get_mcp_tools
-    
     local_tools = [calculator, rag_tool, web_search_tool]
-    mcp_tools = get_mcp_tools()
     
-    return local_tools + mcp_tools
+    return local_tools
 
 
 from langchain_core.runnables import RunnableConfig
@@ -55,8 +51,13 @@ def rag_tool(query: str, config: RunnableConfig) -> dict:
     """
     from app.services.rag_service import query_knowledge_base
     
-    document_id = config.get("configurable", {}).get("document_id")
-    filters = {"document_id": document_id} if document_id else None
+    user_id = config.get("configurable", {}).get("user_id")
+    chat_filters = config.get("configurable", {}).get("filters", {})
+    document_id = chat_filters.get("document_id") if chat_filters else None
+    
+    filters = {"user_id": user_id}
+    if document_id:
+        filters["document_id"] = document_id
     
     try:
         res = query_knowledge_base(query, filters=filters)

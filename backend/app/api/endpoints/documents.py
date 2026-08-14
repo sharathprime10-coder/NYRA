@@ -15,11 +15,11 @@ router = APIRouter()
 UPLOAD_DIR = "./uploaded_docs"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-def process_doc_task(file_path: str, document_id: str):
+def process_doc_task(file_path: str, document_id: str, user_id: int):
     db = SessionLocal()
     try:
         # Process and store in ChromaDB
-        chunks = process_and_store_document(file_path, document_id)
+        chunks = process_and_store_document(file_path, document_id, user_id)
         
         # Update document status
         doc = db.query(Document).filter(Document.id == document_id).first()
@@ -67,7 +67,7 @@ async def upload_document(
             shutil.copyfileobj(file.file, buffer)
             
         # 4. Schedule background processing for RAG
-        background_tasks.add_task(process_doc_task, file_path, str(db_doc.id))
+        background_tasks.add_task(process_doc_task, file_path, str(db_doc.id), current_user.id)
         
         return {"message": "File uploaded and processing started", "document_id": db_doc.id}
         

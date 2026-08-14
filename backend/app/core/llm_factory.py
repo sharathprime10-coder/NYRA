@@ -90,3 +90,7 @@ def get_fast_llm():
         return fast_llm.with_fallbacks(fallbacks=fallbacks, exceptions_to_handle=(Exception,))
     
     return ChatGoogleGenerativeAI(model="gemini-3.6-flash", max_retries=1)
+
+def get_router_llm():
+    """Returns an extremely fast and cheap LLM for routing tasks (like Supervisor)."""
+    return get_fast_llm()

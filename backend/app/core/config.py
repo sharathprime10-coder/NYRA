@@ -4,7 +4,13 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "NYRA Backend"
     DATABASE_URL: str = "postgresql://nyra_user:nyra_password@localhost:5432/nyra_db"
     GEMINI_API_KEY: str = ""
-    JWT_SECRET: str = "supersecretjwtkey_replace_me_in_production"
+    JWT_SECRET: str
+    
+    @property
+    def jwt_secret_key(self) -> str:
+        if self.JWT_SECRET == "supersecretjwtkey_replace_me_in_production":
+            raise ValueError("CRITICAL SECURITY RISK: JWT_SECRET is using the default insecure value.")
+        return self.JWT_SECRET
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200
     GOOGLE_CLIENT_ID: str = ""

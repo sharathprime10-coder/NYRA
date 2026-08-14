@@ -24,9 +24,7 @@ const Header: React.FC = () => {
       {/* Navigation Links */}
       <nav className="hidden md:flex items-center gap-6">
         <Link to="/chat" className="text-primary border-b-2 border-primary pb-2 font-medium">Chat</Link>
-        <Link to="/study" className="text-on-surface-variant hover:text-primary transition-all font-medium">Study</Link>
         <Link to="/knowledge" className="text-on-surface-variant hover:text-primary transition-all font-medium">Sources</Link>
-        <Link to="/intelligence" className="text-on-surface-variant hover:text-primary transition-all font-medium">Intelligence</Link>
       </nav>
       
       {/* Trailing Actions */}

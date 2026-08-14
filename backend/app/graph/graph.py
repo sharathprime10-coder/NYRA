@@ -3,7 +3,8 @@ from typing import Literal
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import START, StateGraph, END
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg_pool import ConnectionPool
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
 
@@ -11,7 +12,7 @@ from app.core.config import settings
 from app.graph.state import NYRAState
 from app.tools.registry import get_all_tools
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from app.core.llm_factory import get_robust_llm, get_writer_llm, get_critic_llm, get_frontier_llm, get_fast_llm
+from app.core.llm_factory import get_robust_llm, get_writer_llm, get_critic_llm, get_frontier_llm, get_fast_llm, get_router_llm
 import os
 
 os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
@@ -19,7 +20,8 @@ if settings.GROQ_API_KEY:
     os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
 # Initialize the LLMs
-llm = get_frontier_llm() # Supervisor & Researcher (complex routing and tool use)
+llm_router = get_router_llm() # Supervisor (cheap, fast routing)
+llm = get_frontier_llm() # Researcher (complex tool use)
 llm_writer = get_writer_llm() # Writer (expressive, fast drafting)
 llm_critic = get_critic_llm() # Critic (deep reasoning to catch hallucinations)
 
@@ -49,9 +51,9 @@ def supervisor_node(state: NYRAState, config=None):
     )
     
     # Use structured output for routing
-    router_llm = llm.with_structured_output(Router)
+    router_llm_structured = llm_router.with_structured_output(Router)
     try:
-        decision = router_llm.invoke([system_msg] + messages, config=config)
+        decision = router_llm_structured.invoke([system_msg] + messages[-10:], config=config)
         next_agent = decision.next_agent
     except Exception as e:
         import logging
@@ -76,7 +78,7 @@ def researcher_node(state: NYRAState, config=None):
     llm_with_tools = llm.bind_tools(tools)
     
     try:
-        response = llm_with_tools.invoke([system_msg] + messages, config=config)
+        response = llm_with_tools.invoke([system_msg] + messages[-10:], config=config)
         return {"messages": [response], "sender": "researcher", "error_retries": 0}
     except Exception as e:
         import logging
@@ -108,7 +110,7 @@ def writer_node(state: NYRAState, config=None):
     current_writer_llm = get_fast_llm() if thinking_level == "low" else llm_writer
     
     try:
-        response = current_writer_llm.invoke([system_msg] + messages, config=config)
+        response = current_writer_llm.invoke([system_msg] + messages[-10:], config=config)
         return {"messages": [AIMessage(content=response.content)], "draft": response.content, "sender": "writer"}
     except Exception as e:
         import logging
@@ -129,7 +131,7 @@ def critic_node(state: NYRAState, config=None):
     
     evaluator_llm = llm_critic.with_structured_output(CriticReview)
     try:
-        review = evaluator_llm.invoke([system_msg] + messages, config=config)
+        review = evaluator_llm.invoke([system_msg] + messages[-10:], config=config)
     except Exception as e:
         import logging
         logging.error(f"Critic LLM failed: {e}")
@@ -226,8 +228,18 @@ graph.add_conditional_edges("critic", route_from_critic, {
     "FINISH": END
 })
 
+import psycopg
+
 # Checkpointer
-conn = sqlite3.connect("nyra_checkpoints.db", check_same_thread=False)
-checkpointer = SqliteSaver(conn)
+# Supabase transaction pooler (6543) can hang psycopg_pool. Use session port (5432).
+langgraph_db_url = settings.DATABASE_URL.replace(":6543", ":5432")
+
+# Run setup in a dedicated autocommit connection to avoid transaction block errors 
+# with CREATE INDEX CONCURRENTLY
+with psycopg.connect(langgraph_db_url, autocommit=True) as conn:
+    PostgresSaver(conn).setup()
+
+pool = ConnectionPool(conninfo=langgraph_db_url)
+checkpointer = PostgresSaver(pool)
 
 nyra_graph = graph.compile(checkpointer=checkpointer)

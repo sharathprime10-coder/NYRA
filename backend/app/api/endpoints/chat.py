@@ -81,7 +81,7 @@ def send_message(
     doc_id = chat_request.filters.get("document_id") if chat_request.filters else None
     if doc_id:
         from app.db.models.document import Document
-        doc = db.query(Document).filter(Document.id == doc_id).first()
+        doc = db.query(Document).filter(Document.id == doc_id, Document.user_id == current_user.id).first()
         if doc:
             sys_msg = SystemMessage(content=f"Context: The user has attached a document named '{doc.filename}' for this specific query. If the user refers to 'this document', 'the PDF', or similar, they are referring to '{doc.filename}'. Use the rag_tool to read it.")
             input_messages.append(sys_msg)
@@ -90,7 +90,8 @@ def send_message(
         "configurable": {
             "thread_id": str(session_id),
             "filters": chat_request.filters,
-            "thinking_level": chat_request.thinking_level
+            "thinking_level": chat_request.thinking_level,
+            "user_id": current_user.id
         }
     }
     

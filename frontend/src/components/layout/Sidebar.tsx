@@ -30,10 +30,6 @@ const Sidebar: React.FC = () => {
           <Database className="w-5 h-5" />
           <span className="font-label text-xs">Knowledge Base</span>
         </Link>
-        <Link to="/search" className="flex items-center gap-3 p-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-xl hover-lock font-medium">
-          <Search className="w-5 h-5" />
-          <span className="font-label text-xs">Search</span>
-        </Link>
         <Link to="/settings" className="flex items-center gap-3 p-3 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-xl hover-lock mt-auto font-medium">
           <Settings className="w-5 h-5" />
           <span className="font-label text-xs">Settings</span>

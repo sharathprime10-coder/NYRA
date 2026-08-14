@@ -56,7 +56,7 @@ def _extract_text_with_gemini(file_path: str) -> str:
         except Exception as e:
             print(f"Failed to delete Gemini file {uploaded_file.name}: {e}")
 
-def process_and_store_document(file_path: str, document_id: str):
+def process_and_store_document(file_path: str, document_id: str, user_id: int):
     """Loads a file, chunks it, and stores embeddings in ChromaDB."""
     chunks = []
     text_splitter = RecursiveCharacterTextSplitter(
@@ -90,6 +90,7 @@ def process_and_store_document(file_path: str, document_id: str):
     for i, chunk in enumerate(chunks):
         if chunk.page_content.strip():
             chunk.metadata["document_id"] = document_id
+            chunk.metadata["user_id"] = user_id
             chunk.metadata["chunk_index"] = i
             valid_chunks.append(chunk)
         
