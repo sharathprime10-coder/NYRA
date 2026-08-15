@@ -18,3 +18,4 @@ class NYRAState(TypedDict):
     next_node: Optional[str]
     error_retries: Optional[int]
     critic_attempts: Optional[int]
+    tool_invoked: Optional[bool]

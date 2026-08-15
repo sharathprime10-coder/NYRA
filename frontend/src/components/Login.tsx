@@ -61,7 +61,7 @@ const Login: React.FC = () => {
         <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-[64px]">
           <div className="relative z-10">
             <div className="w-24 h-24 mb-4 rounded-xl overflow-hidden glass-panel flex items-center justify-center p-2">
-              <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1owtDrGiK0eLLr0TiFNNHaZuvX2WhyFxW8q0XM6csuaJeTvZUOHW-0sv9XITQuO8qC31-UYdvXXHJ7gaCZEpZjyR-U0sH8d4pym7yY3-wHcl2eTjwtjBz1x5MFjsJFCFWK4A3-Ld9s9NLGxYvyrRzudMezd2ptn2NMrhuOrKh-5D_QVEa1bZahSL5bXJ5rAROMZ_3-PFnuR7qt1Lwhm6IkpFVT-AY0--f1jDzEQtr361yI64qWV1DUvOjviMQAKyEkag" alt="NYRA Logo" className="w-full h-full object-contain" />
+              <img src="/logo.webp" alt="NYRA Logo" className="w-full h-full object-contain" />
             </div>
             <p className="font-body text-lg text-on-surface-variant mt-2 max-w-md">Premium Knowledge Assistant. Enter the nexus of infinite data.</p>
           </div>
@@ -78,7 +78,7 @@ const Login: React.FC = () => {
           {/* Mobile Branding (Hidden on Desktop) */}
           <div className="absolute top-8 left-8 lg:hidden">
             <div className="w-16 h-16 rounded-lg overflow-hidden glass-panel flex items-center justify-center p-1.5">
-              <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0OqKVXHF8cmSgMdKy_a4a4i8v28-zf31elQdXNrSOvB5npHMGcA3j4G8e3L_ZaOAshvHfzoHIYbmXQlZ0sr3nfsKnwQ6j5FrcyK6xhrh0cQ3SIfrRwPrChW82_s7DWMdQHodu7_a-7BHlDxgH3s1XSPRDm9163JClEnUy43pcuqCosUYQLwzJ1EpsP7c7C87T7Cq-a0wlMX6olKgqZIdLorA3BuUtX1EGrMpbIlMKepi8h-S2jVIYtsHCEc1bT4Uq5Yc" alt="NYRA Logo" className="w-full h-full object-contain" />
+              <img src="/logo.webp" alt="NYRA Logo" className="w-full h-full object-contain" />
             </div>
           </div>
 
@@ -86,7 +86,7 @@ const Login: React.FC = () => {
             <div className="glass-panel w-full rounded-xl p-8 lg:p-10 flex flex-col gap-8 transform-style-preserve-3d">
               <div className="space-y-2" style={{ transform: "translateZ(30px)" }}>
               <div className="w-16 h-16 mb-6 rounded-lg overflow-hidden glass-panel flex items-center justify-center p-1.5 mx-auto lg:mx-0">
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFGhnK99DHPNTure4Fj01lb9CEBV3Be6ht0VrGxZYOjki4wbW9ilPzRrudp-HI7xj7baypxYBb8rOfMl-epvBjAS0rpEQUSPRAojg52_-qQNjkdbMCgvq_8g6V90Q0PldGdTpNOPF188uez-BLJ1yzVdp8eGOF6DKjIDEPanVJxbWoJgrXDWYvRHxUpe6fbFix_nnxiUp4R2PCenXgwJnGLfoIkObQsSdM01hw92Lv1uokZGX_MDyMhabz0ZGj5tAA-8U" alt="NYRA Logo" className="w-full h-full object-contain" />
+                <img src="/logo.webp" alt="NYRA Logo" className="w-full h-full object-contain" />
               </div>
               <h2 className="font-display text-2xl font-semibold text-on-surface">Login to your workspace</h2>
               <div className="relative h-16 w-full overflow-hidden">

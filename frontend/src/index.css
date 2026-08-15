@@ -4,8 +4,22 @@
 @config "../tailwind.config.js";
 
 @layer base {
+  html, body {
+    @apply w-full overflow-x-hidden;
+  }
   body {
-    @apply bg-background text-on-background antialiased font-body min-h-screen overflow-hidden overscroll-x-none selection:bg-primary selection:text-on-primary;
+    @apply bg-background text-on-background antialiased font-body min-h-screen overscroll-x-none selection:bg-primary selection:text-on-primary;
+  }
+  
+  /* Prevent iOS zoom on inputs */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Apple recommended minimum tap target */
+  button, select, input[type="button"], input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 

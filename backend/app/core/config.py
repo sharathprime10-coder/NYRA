@@ -1,4 +1,8 @@
+import os
 from pydantic_settings import BaseSettings
+
+env = os.environ.get("NYRA_ENV", "development")
+env_file = f".env.{env}" if env != "development" else ".env"
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NYRA Backend"
@@ -22,6 +26,7 @@ class Settings(BaseSettings):
     NVIDIA_API_KEY: str = ""
     
     class Config:
-        env_file = ".env"
+        env_file = env_file
+        extra = "ignore"
 
 settings = Settings()

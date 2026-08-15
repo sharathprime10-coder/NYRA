@@ -10,8 +10,11 @@ import {
   Sun, 
   Trash2, 
   LogOut,
-  Check
+  Check,
+  Mail
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { trackEvent } from '../utils/analytics';
 
 type Tab = 'general' | 'voice' | 'system';
 
@@ -22,6 +25,7 @@ const Settings: React.FC = () => {
   // Settings State
   const [theme, setTheme] = useState(localStorage.getItem('nyra_theme') || 'dark');
   const [animations, setAnimations] = useState(localStorage.getItem('nyra_animations') !== 'false');
+  const [sassy, setSassy] = useState(localStorage.getItem('nyra_tone') === 'sassy');
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('nyra_voice') || '');
   const [speechSpeed, setSpeechSpeed] = useState(parseFloat(localStorage.getItem('nyra_speed') || '1.0'));
   const [autoPlayAudio, setAutoPlayAudio] = useState(localStorage.getItem('nyra_autoplay') === 'true');
@@ -55,6 +59,7 @@ const Settings: React.FC = () => {
     }
   }, [theme]);
   useEffect(() => { localStorage.setItem('nyra_animations', animations.toString()); }, [animations]);
+  useEffect(() => { localStorage.setItem('nyra_tone', sassy ? 'sassy' : 'default'); }, [sassy]);
   useEffect(() => { localStorage.setItem('nyra_voice', selectedVoice); }, [selectedVoice]);
   useEffect(() => { localStorage.setItem('nyra_speed', speechSpeed.toString()); }, [speechSpeed]);
   useEffect(() => { localStorage.setItem('nyra_autoplay', autoPlayAudio.toString()); }, [autoPlayAudio]);
@@ -62,7 +67,8 @@ const Settings: React.FC = () => {
   const handleClearHistory = () => {
     if (window.confirm("Are you sure you want to clear your local chat history? This cannot be undone.")) {
       // Assuming chat history is stored locally or requires an API call. For now, visual feedback.
-      alert("Chat history cleared!");
+      toast.success("Chat history cleared successfully.");
+      trackEvent('clear_history');
     }
   };
 
@@ -143,18 +149,33 @@ const Settings: React.FC = () => {
                 <hr className="border-outline-variant/20" />
 
                 <div>
-                  <h3 className="text-xl font-display font-bold text-on-surface mb-4">Performance</h3>
-                  <div className="flex items-center justify-between p-4 bg-surface-container rounded-2xl border border-outline-variant/20 hover-lock">
-                    <div>
-                      <h4 className="font-label font-bold text-on-surface">Rich Animations</h4>
-                      <p className="text-xs text-on-surface-variant mt-1 max-w-sm">Enable cinematic particles and dynamic glow effects. Turn off if experiencing lag.</p>
+                  <h3 className="text-xl font-display font-bold text-on-surface mb-4">Performance & Persona</h3>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between p-4 bg-surface-container rounded-2xl border border-outline-variant/20 hover-lock">
+                      <div>
+                        <h4 className="font-label font-bold text-on-surface">Rich Animations</h4>
+                        <p className="text-xs text-on-surface-variant mt-1 max-w-sm">Enable cinematic particles and dynamic glow effects. Turn off if experiencing lag.</p>
+                      </div>
+                      <button 
+                        onClick={() => setAnimations(!animations)}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${animations ? 'bg-primary' : 'bg-surface-variant'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${animations ? 'left-7' : 'left-1'}`} />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => setAnimations(!animations)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${animations ? 'bg-primary' : 'bg-surface-variant'}`}
-                    >
-                      <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${animations ? 'left-7' : 'left-1'}`} />
-                    </button>
+
+                    <div className="flex items-center justify-between p-4 bg-surface-container rounded-2xl border border-outline-variant/20 hover-lock">
+                      <div>
+                        <h4 className="font-label font-bold text-on-surface">Sassy Mode</h4>
+                        <p className="text-xs text-on-surface-variant mt-1 max-w-sm">Give NYRA a dry, witty personality. She remains helpful but adds a bit of flavor.</p>
+                      </div>
+                      <button 
+                        onClick={() => setSassy(!sassy)}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${sassy ? 'bg-primary' : 'bg-surface-variant'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${sassy ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -247,6 +268,16 @@ const Settings: React.FC = () => {
                       >
                         <LogOut className="w-4 h-4" /> Sign Out
                       </button>
+                    </div>
+                    
+                    <hr className="border-outline-variant/20 my-4" />
+                    
+                    <div>
+                      <h4 className="font-label font-bold text-on-surface mb-4 flex items-center gap-2"><Mail className="w-4 h-4"/> Support & Contact</h4>
+                      <p className="text-sm text-on-surface-variant mb-2">Need help or want to provide feedback?</p>
+                      <a href="mailto:sharathprime10@gmail.com" className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 transition-colors rounded-xl font-label text-sm font-semibold border border-primary/20">
+                        Email Developer
+                      </a>
                     </div>
                   </div>
                 </div>

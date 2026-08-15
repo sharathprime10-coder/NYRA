@@ -82,7 +82,7 @@ const Welcome: React.FC = () => {
       <nav className={`fixed top-0 left-0 w-full z-50 flex justify-between items-center h-20 px-[20px] md:px-[64px] transition-all duration-300 animate-glide-in ${scrolled ? 'glass-panel border-b border-outline-variant/10' : 'bg-transparent'}`}>
         <div className="flex items-center gap-2 lock-on-hover rounded-xl px-2 py-1 cursor-pointer">
           <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shadow-[0_0_20px_rgba(73,75,214,0.3)] bg-surface-container">
-            <img alt="NYRA Logo" className="w-8 h-8 object-contain rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1owtDrGiK0eLLr0TiFNNHaZuvX2WhyFxW8q0XM6csuaJeTvZUOHW-0sv9XITQuO8qC31-UYdvXXHJ7gaCZEpZjyR-U0sH8d4pym7yY3-wHcl2eTjwtjBz1x5MFjsJFCFWK4A3-Ld9s9NLGxYvyrRzudMezd2ptn2NMrhuOrKh-5D_QVEa1bZahSL5bXJ5rAROMZ_3-PFnuR7qt1Lwhm6IkpFVT-AY0--f1jDzEQtr361yI64qWV1DUvOjviMQAKyEkag" />
+            <img alt="NYRA Logo" className="w-8 h-8 object-contain rounded-lg" src="/logo.webp" />
           </div>
           <span className="font-display text-2xl font-extrabold tracking-tight hidden md:block">NYRA</span>
         </div>
@@ -160,7 +160,7 @@ const Welcome: React.FC = () => {
                 <div className="flex items-start gap-4 max-w-[90%]">
                   <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-lg shadow-primary/20 relative lock-on-hover cursor-default">
                     <div className="absolute inset-0 rounded-full border border-white/20 z-10 pointer-events-none"></div>
-                    <img alt="NYRA AI" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZFpqBmp9Q0IvEwQI0YLO1msP2m9pFaeYam2iZh5GouMGbktH1LaE_877pnOp8a6INqSGa6sngvUE_mXps7akfabw-hes3X6HB3efO91IpQyIoo2oVXs-TLrVGjhayp72iRxd9xKHvb2W83TkXFhQF990ih7eaSwFlCSWqPyHgvIvOr8nIcaUl1LM4371ntKxwcgxhPUFnOGuZ8FQHfS4xZCd9R2xH-ZSRRNq_VmqxWbredR_tOxQ5NvnPfIrQbTpPwBw" />
+                    <img alt="NYRA AI" className="w-full h-full object-cover" src="/logo.webp" />
                   </div>
                   <div className="flex flex-col gap-3 w-full">
                     <div className="text-base font-body text-on-surface/90 leading-relaxed lock-on-hover p-2 rounded-lg cursor-default border border-transparent">

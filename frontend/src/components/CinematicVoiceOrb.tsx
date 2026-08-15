@@ -54,6 +54,8 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
   const recognitionRef = useRef<any>(null);
   const orbStateRef = useRef<OrbState>('init');
   const sessionIdRef = useRef<number | undefined>(sessionId);
+  const silenceTimerRef = useRef<any>(null);
+  const accumulatedTranscriptRef = useRef<string>('');
 
   useEffect(() => {
     orbStateRef.current = orbState;
@@ -74,7 +76,7 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
+        recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = true;
         
         // Match recognition language to the selected TTS voice
@@ -103,12 +105,23 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
           }
           
           if (interimTranscript) {
-             setTranscript(interimTranscript);
+             setTranscript((accumulatedTranscriptRef.current + " " + interimTranscript).trim());
+             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           }
           
           if (finalTranscript) {
-            setTranscript(finalTranscript);
-            handleProcessQuery(finalTranscript);
+            accumulatedTranscriptRef.current = (accumulatedTranscriptRef.current + " " + finalTranscript).trim();
+            setTranscript(accumulatedTranscriptRef.current);
+            
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            
+            silenceTimerRef.current = setTimeout(() => {
+                const finalQuery = accumulatedTranscriptRef.current.trim();
+                if (finalQuery) {
+                    accumulatedTranscriptRef.current = "";
+                    handleProcessQuery(finalQuery);
+                }
+            }, 3000);
           }
         };
         
@@ -245,6 +258,7 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
 
   const handleClose = () => {
       try {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         if (recognitionRef.current) {
             recognitionRef.current.onend = null;
             recognitionRef.current.abort();

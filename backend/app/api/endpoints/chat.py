@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Literal
 from uuid import UUID
+import json
+import asyncio
 
 from app.db.database import get_db
 from app.db.models.user import User
@@ -14,9 +17,11 @@ router = APIRouter()
 
 class ChatMessageRequest(BaseModel):
     message: str
-    session_id: Optional[UUID] = None
+    session_id: Optional[str] = None
     filters: Optional[dict] = None
-    thinking_level: str = "medium"
+    thinking_level: str = "low"
+    force_refresh: bool = False
+    tone: Literal["default", "sassy"] = "default"
 
 class Source(BaseModel):
     document_id: Optional[str]
@@ -30,9 +35,9 @@ class ChatMessageResponse(BaseModel):
     confidence: str
     session_id: Optional[str]
 
-@router.post("/", response_model=ChatMessageResponse)
+@router.post("/")
 @limiter.limit("60/minute")
-def send_message(
+async def send_message(
     request: Request, 
     chat_request: ChatMessageRequest, 
     db: Session = Depends(get_db),
@@ -41,35 +46,101 @@ def send_message(
     from app.graph.graph import nyra_graph
     from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage
     from app.db.models.chat import ChatSession, ChatMessage
-    import json
+    from app.services.cache_service import get_cached_response, set_cached_response
     
     # Get or create session
     session_id = chat_request.session_id
     if session_id:
-        # Verify the session belongs to the current user (BOLA/IDOR protection)
         session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id).first()
         if not session:
             raise HTTPException(status_code=403, detail="Not authorized to access this session")
     else:
+        user_sessions = db.query(ChatSession).filter(ChatSession.user_id == current_user.id).order_by(ChatSession.created_at.desc()).all()
+        if len(user_sessions) >= 10:
+            for session_to_delete in user_sessions[9:]:
+                db.delete(session_to_delete)
+            db.commit()
+            
         new_session = ChatSession(user_id=current_user.id, title="NYRA Chat")
         db.add(new_session)
         db.commit()
         db.refresh(new_session)
-        session_id = new_session.id
+        session_id = str(new_session.id)
     
-    # Get message history
-    history = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at).all()
+    thinking_level = chat_request.thinking_level
+    if thinking_level == "low":
+        msg_lower = chat_request.message.lower()
+        needs_deep = any(kw in msg_lower for kw in ["calculate", "compare", "according to", "explain", "analyze"])
+        if len(chat_request.message) > 100 or needs_deep:
+            thinking_level = "medium"
+
+    doc_id = chat_request.filters.get("document_id") if chat_request.filters else None
+
+    # Parallelize DB history load and Cache check
+    def fetch_history():
+        return db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at).all()
+        
+    def check_cache():
+        if chat_request.force_refresh:
+            return None
+        return get_cached_response(chat_request.message, current_user.id, doc_id)
+
+    history, cached = await asyncio.gather(
+        asyncio.to_thread(fetch_history),
+        asyncio.to_thread(check_cache)
+    )
+
+    if cached:
+        db_ai_msg = ChatMessage(
+            session_id=session_id,
+            role="ai",
+            content=cached["answer"],
+            sources=json.dumps(cached["sources"]) if cached.get("sources") else None
+        )
+        db.add(db_ai_msg)
+        db.commit()
+        
+        async def cached_stream():
+            yield f"data: {json.dumps({'event': 'token', 'content': cached['answer']})}\n\n"
+            yield f"data: {json.dumps({'event': 'end', 'session_id': session_id})}\n\n"
+        return StreamingResponse(cached_stream(), media_type="text/event-stream")
+
     input_messages = []
-    for msg in history:
+    
+    if len(history) > 6:
+        older_history = history[:-6]
+        recent_history = history[-6:]
+        
+        summary_prompt = "Summarize the following conversation history briefly:\n"
+        for msg in older_history:
+            summary_prompt += f"{msg.role.upper()}: {msg.content}\n"
+            
+        from app.core.llm_factory import get_router_llm
+        try:
+            summary = get_router_llm().invoke(summary_prompt).content
+            input_messages.append(SystemMessage(content=f"Previous Conversation Summary: {summary}"))
+        except Exception:
+            pass
+            
+        history_to_process = recent_history
+    else:
+        history_to_process = history
+
+    for msg in history_to_process:
         if msg.role == "user":
             input_messages.append(HumanMessage(content=msg.content))
         elif msg.role == "ai":
             input_messages.append(AIMessage(content=msg.content))
 
-    # Append new user message
+    if doc_id:
+        from app.db.models.document import Document
+        doc = db.query(Document).filter(Document.id == doc_id, Document.user_id == current_user.id).first()
+        if doc:
+            sys_msg = SystemMessage(content=f"Context: The user has attached a document named '{doc.filename}' for this specific query. If the user refers to 'this document', 'the PDF', or similar, they are referring to '{doc.filename}'. You MUST use the rag_tool with query='{chat_request.message}' to retrieve and read the document content before answering.")
+            input_messages.append(sys_msg)
+
     input_messages.append(HumanMessage(content=chat_request.message))
     
-    # Log user message to relational DB for frontend history
     db_user_msg = ChatMessage(
         session_id=session_id,
         role="user",
@@ -77,121 +148,111 @@ def send_message(
     )
     db.add(db_user_msg)
     db.commit()
-    
-    doc_id = chat_request.filters.get("document_id") if chat_request.filters else None
-    if doc_id:
-        from app.db.models.document import Document
-        doc = db.query(Document).filter(Document.id == doc_id, Document.user_id == current_user.id).first()
-        if doc:
-            sys_msg = SystemMessage(content=f"Context: The user has attached a document named '{doc.filename}' for this specific query. If the user refers to 'this document', 'the PDF', or similar, they are referring to '{doc.filename}'. Use the rag_tool to read it.")
-            input_messages.append(sys_msg)
 
+    from app.core.token_tracker import TokenTrackerCallback
     config = {
         "configurable": {
             "thread_id": str(session_id),
             "filters": chat_request.filters,
-            "thinking_level": chat_request.thinking_level,
-            "user_id": current_user.id
-        }
+            "thinking_level": thinking_level,
+            "user_id": str(current_user.id),
+            "tone": chat_request.tone
+        },
+        "callbacks": [TokenTrackerCallback(str(session_id), "llm_invocation")]
     }
     
-    try:
-        # Run graph
-        result = nyra_graph.invoke(
-            {
-                "messages": input_messages,
-                "user_id": current_user.id
-            }, 
-            config=config
-        )
-        
-        final_content = result["messages"][-1].content
-        if isinstance(final_content, list):
-            final_message = ""
-            for block in final_content:
-                if isinstance(block, dict) and "text" in block:
-                    final_message += block["text"]
-                elif isinstance(block, str):
-                    final_message += block
-        else:
-            final_message = str(final_content)
-        
-        # Extract sources from RAG tool if it was used
-        sources = []
-        confidence = "High"
-        for msg in result["messages"]:
-            if getattr(msg, "name", None) == "rag_tool" and isinstance(msg, ToolMessage):
-                try:
-                    data = json.loads(msg.content)
-                    if "sources" in data:
-                        for src in data["sources"]:
-                            sources.append(Source(
-                                document_id=src.get("document_id"),
-                                source=src.get("filename"),
-                                page=src.get("page"),
-                                content=""
-                            ))
-                except Exception as e:
-                    import logging
-                    logging.warning(f"Failed to parse tool message sources: {e}")
-        
-        # Log AI message to relational DB for frontend history
-        db_ai_msg = ChatMessage(
-            session_id=session_id,
-            role="ai",
-            content=final_message,
-            sources=json.dumps([s.dict() for s in sources]) if sources else None
-        )
-        db.add(db_ai_msg)
-        db.commit()
-        
-        return ChatMessageResponse(
-            answer=final_message,
-            sources=sources,
-            confidence=confidence,
-            session_id=str(session_id) if session_id else None
-        )
-    except Exception as e:
-        import traceback
-        with open("error_log.txt", "a") as f:
-            f.write("ERROR IN CHAT API:\n")
-            f.write(traceback.format_exc())
-            f.write("\n\n")
-        raise HTTPException(status_code=500, detail=str(e))
+    async def event_generator():
+        final_answer = ""
+        try:
+            async for event in nyra_graph.astream_events(
+                {"messages": input_messages, "user_id": str(current_user.id)},
+                config=config,
+                version="v2"
+            ):
+                kind = event["event"]
+                name = event.get("name", "")
+                
+                # Report node transitions
+                if kind == "on_chain_start" and name in ["supervisor", "researcher", "writer", "critic"]:
+                    yield f"data: {json.dumps({'event': 'status', 'node': name})}\n\n"
+                    
+                # Stream writer node output
+                elif kind == "on_chat_model_stream" and "writer" in event.get("tags", []):
+                    chunk = event["data"]["chunk"].content
+                    if isinstance(chunk, str) and chunk:
+                        final_answer += chunk
+                        yield f"data: {json.dumps({'event': 'token', 'content': chunk})}\n\n"
+                        
+            # Save final message
+            def save_final():
+                db_ai_msg = ChatMessage(
+                    session_id=session_id,
+                    role="ai",
+                    content=final_answer,
+                    sources=None
+                )
+                db.add(db_ai_msg)
+                db.commit()
+                # Cache
+                set_cached_response(chat_request.message, str(current_user.id), doc_id, final_answer, [], "High")
+            
+            await asyncio.to_thread(save_final)
+            
+            yield f"data: {json.dumps({'event': 'end', 'session_id': session_id})}\n\n"
+            
+        except Exception as e:
+            from app.core.logging_config import setup_logging
+            logger = setup_logging()
+            logger.error("chat_pipeline_failed", extra={"session_id": session_id}, exc_info=True)
+            yield f"data: {json.dumps({'event': 'error', 'content': 'An error occurred during generation.'})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @router.get("/history")
 def get_chat_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from app.db.models.chat import ChatSession
     sessions = db.query(ChatSession).filter(ChatSession.user_id == current_user.id).order_by(ChatSession.created_at.desc()).all()
-    return [{"id": s.id, "title": s.title, "created_at": s.created_at} for s in sessions]
+    
+    result = []
+    for s in sessions:
+        msgs = db.query(ChatMessage).filter(ChatMessage.session_id == str(s.id)).order_by(ChatMessage.created_at).all()
+        if msgs:
+            result.append({
+                "id": str(s.id),
+                "title": s.title,
+                "created_at": s.created_at.isoformat(),
+                "message_count": len(msgs)
+            })
+            
+    return result
 
 @router.get("/{session_id}")
-def get_session_messages(session_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_chat_session(session_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from app.db.models.chat import ChatSession, ChatMessage
-    import json
-    
     session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
         
-    messages = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at.asc()).all()
+    messages = db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.created_at).all()
     
-    result = []
-    for msg in messages:
-        sources_list = []
-        if msg.sources:
-            try:
-                sources_list = json.loads(msg.sources)
-            except Exception as e:
-                import logging
-                logging.warning(f"Failed to parse chat message sources: {e}")
-                
-        result.append({
+    return [
+        {
             "id": msg.id,
             "role": msg.role,
             "content": msg.content,
-            "sources": sources_list,
-            "created_at": msg.created_at
-        })
+            "sources": json.loads(msg.sources) if msg.sources else [],
+            "created_at": msg.created_at.isoformat()
+        }
+        for msg in messages
+    ]
+
+@router.delete("/{session_id}")
+def delete_chat_session(session_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from app.db.models.chat import ChatSession
+    session = db.query(ChatSession).filter(ChatSession.id == session_id, ChatSession.user_id == current_user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
         
-    return result
+    db.delete(session)
+    db.commit()
+    return {"status": "success"}

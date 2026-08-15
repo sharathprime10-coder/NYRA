@@ -3,39 +3,83 @@ import asyncio
 from mcp.client.stdio import stdio_client, StdioServerParameters
 from mcp.client.session import ClientSession
 from langchain_mcp_adapters.tools import load_mcp_tools
+import os
+import sys
 
-# Global state for MCP tools and lifecycle
-_mcp_tools = []
-_exit_stack = AsyncExitStack()
+# Cache user sessions so we don't start a new process on every single turn
+# Key: user_id -> Value: (AsyncExitStack, tools_list)
+_user_sessions = {}
 
-async def initialize_mcp():
-    """Initializes the MCP client and loads tools globally."""
-    global _mcp_tools, _exit_stack
+async def _init_user_mcp(user_id: int):
+    """Async helper to initialize servers for a specific user."""
+    exit_stack = AsyncExitStack()
+    user_tools = []
     
-    server_params = StdioServerParameters(
-        command="npx",
-        args=["-y", "@modelcontextprotocol/server-filesystem", "./uploaded_docs"],
-    )
+    # 1. Filesystem Server (Scoped to user_id)
+    user_docs_dir = os.path.abspath(f"./uploaded_docs/{user_id}")
+    os.makedirs(user_docs_dir, exist_ok=True)
     
-    try:
-        # Start the stdio transport
-        read, write = await _exit_stack.enter_async_context(stdio_client(server_params))
-        
-        # Start the MCP session
-        session = await _exit_stack.enter_async_context(ClientSession(read, write))
-        await session.initialize()
-        
-        # Load tools into LangChain format
-        _mcp_tools = await load_mcp_tools(session)
-        print(f"Successfully loaded {len(_mcp_tools)} MCP tools!")
-    except Exception as e:
-        print(f"Failed to initialize MCP: {e}")
+    # 2. Notes Server
+    notes_server_path = os.path.abspath("./mcp_servers/notes_server.py")
+    
+    servers = [
+        {
+            "name": "filesystem",
+            "params": StdioServerParameters(
+                command="npx",
+                args=["-y", "@modelcontextprotocol/server-filesystem", user_docs_dir],
+            )
+        },
+        {
+            "name": "notes",
+            "params": StdioServerParameters(
+                command=sys.executable,
+                args=[notes_server_path],
+            )
+        }
+    ]
+    
+    for server_config in servers:
+        try:
+            read, write = await exit_stack.enter_async_context(stdio_client(server_config["params"]))
+            session = await exit_stack.enter_async_context(ClientSession(read, write))
+            await session.initialize()
+            
+            # Load tools from this specific server
+            tools = await load_mcp_tools(session)
+            # Annotate tools to log which server they came from
+            for t in tools:
+                t.description = f"[{server_config['name']}] " + t.description
+            
+            user_tools.extend(tools)
+            print(f"Loaded {len(tools)} tools from MCP server: {server_config['name']}")
+        except Exception as e:
+            print(f"Failed to initialize MCP server {server_config['name']}: {e}")
+            # Graceful degradation: continue with the remaining servers
+    
+    return exit_stack, user_tools
+
+async def get_mcp_tools(user_id: int):
+    """Returns the MCP tools scoped to the specific user. Initializes asynchronously if needed."""
+    if user_id not in _user_sessions:
+        try:
+            exit_stack, tools = await _init_user_mcp(user_id)
+            _user_sessions[user_id] = (exit_stack, tools)
+        except Exception as e:
+            print(f"Error loading MCP tools for user {user_id}: {e}")
+            return []
+            
+    return _user_sessions[user_id][1]
 
 async def cleanup_mcp():
-    """Cleans up the MCP client connections."""
-    global _exit_stack
-    await _exit_stack.aclose()
+    """Cleans up all MCP client connections across all users."""
+    for user_id, (exit_stack, tools) in _user_sessions.items():
+        try:
+            await asyncio.wait_for(exit_stack.aclose(), timeout=2.0)
+        except Exception as e:
+            print(f"Error closing MCP session for user {user_id}: {e}")
+    _user_sessions.clear()
 
-def get_mcp_tools():
-    """Returns the globally loaded MCP tools."""
-    return _mcp_tools
+async def initialize_mcp():
+    """No-op global startup. We lazily load per-user now."""
+    pass

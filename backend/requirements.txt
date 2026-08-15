@@ -18,3 +18,15 @@ chromadb
 langchain-community
 langchain-chroma
 slowapi
+pytest
+httpx
+python-json-logger
+ruff
+black
+pytest-mock
+sentry-sdk
+
+rank_bm25
+flashrank
+groq
+langchain-mcp-adapters

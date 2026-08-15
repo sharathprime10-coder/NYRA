@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import Background from './Background';
 import TiltCard from './common/TiltCard';
+import toast from 'react-hot-toast';
 
 const AVATARS = [
   { id: 'hulk', name: 'Hulk', url: '/avatars/hulk.jpg' },
@@ -66,9 +67,11 @@ const Onboarding: React.FC = () => {
         avatar_url: res.data.avatar_url
       });
 
-      navigate('/dashboard');
+      toast.success("Profile saved successfully!");
+      navigate('/thank-you');
     } catch (err) {
       console.error("Failed to update profile", err);
+      toast.error("Failed to update profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -157,9 +160,15 @@ const Onboarding: React.FC = () => {
                 whileTap={{ scale: 0.95 }}
                 type="submit"
                 disabled={loading || !displayName.trim()}
-                className="comic-btn px-10 py-4 text-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="comic-btn px-10 py-4 text-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {loading ? 'SAVING...' : 'ENTER MULTIVERSE'}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" /> SAVING...
+                  </>
+                ) : (
+                  'ENTER MULTIVERSE'
+                )}
               </motion.button>
             </div>
           </form>

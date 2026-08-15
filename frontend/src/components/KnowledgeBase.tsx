@@ -22,6 +22,17 @@ const KnowledgeBase: React.FC = () => {
     fetchDocuments();
   }, []);
 
+  // Poll every 3 seconds if there are processing documents
+  useEffect(() => {
+    const hasProcessing = documents.some(d => d.status === 'processing');
+    if (hasProcessing) {
+      const interval = setInterval(() => {
+        fetchDocuments();
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [documents]);
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -79,7 +90,7 @@ const KnowledgeBase: React.FC = () => {
               ref={fileInputRef} 
               style={{ display: 'none' }} 
               onChange={handleFileChange} 
-              accept=".pdf,.txt,.docx,.jpg,.jpeg,.png,.webp"
+              accept=".pdf,.txt,.docx,.jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a"
             />
             <button 
               onClick={handleUploadClick}
@@ -159,13 +170,16 @@ const KnowledgeBase: React.FC = () => {
                     {doc.status === 'processing' && (
                       <div className="absolute inset-0 shimmer-effect opacity-30 pointer-events-none"></div>
                     )}
+                    {doc.status === 'transcribing' && (
+                      <div className="absolute inset-0 shimmer-effect opacity-30 bg-tertiary/20 pointer-events-none"></div>
+                    )}
                     {doc.status === 'failed' && (
                       <div className="absolute top-0 right-0 w-1 h-full bg-error/50"></div>
                     )}
                     
                     <div className="flex items-start gap-4 relative z-10" style={{ transform: "translateZ(20px)" }}>
                       <div className={`w-12 h-12 rounded-lg ${doc.status === 'failed' ? 'bg-error/10 border-error/20' : 'bg-surface-variant/50 border-outline-variant/30'} flex items-center justify-center flex-shrink-0 border`}>
-                        {doc.status === 'processing' ? (
+                        {(doc.status === 'processing' || doc.status === 'transcribing') ? (
                           <RefreshCw className="text-primary w-6 h-6 animate-spin" />
                         ) : doc.status === 'failed' ? (
                           <AlertCircle className="text-error w-6 h-6" />
@@ -183,7 +197,7 @@ const KnowledgeBase: React.FC = () => {
                     <div className="flex gap-1 mt-1 relative z-10">
                       <div className={`h-1 flex-1 rounded-full ${doc.status === 'failed' ? 'bg-error' : 'bg-tertiary'}`}></div>
                       <div className={`h-1 flex-1 rounded-full ${doc.status === 'uploaded' || doc.status === 'failed' ? 'bg-surface-variant' : 'bg-tertiary'}`}></div>
-                      <div className={`h-1 flex-1 rounded-full ${doc.status === 'processing' ? 'bg-primary animate-pulse' : doc.status === 'ready' ? 'bg-tertiary' : 'bg-surface-variant'}`}></div>
+                      <div className={`h-1 flex-1 rounded-full ${(doc.status === 'processing' || doc.status === 'transcribing') ? 'bg-primary animate-pulse' : doc.status === 'ready' ? 'bg-tertiary' : 'bg-surface-variant'}`}></div>
                       <div className={`h-1 flex-1 rounded-full ${doc.status === 'ready' ? 'bg-tertiary' : 'bg-surface-variant'}`}></div>
                     </div>
                     
@@ -196,6 +210,11 @@ const KnowledgeBase: React.FC = () => {
                       {doc.status === 'processing' && (
                         <span className="inline-flex items-center gap-1.5 text-primary font-label text-xs font-semibold px-2 py-1">
                            Processing Vectors...
+                        </span>
+                      )}
+                      {doc.status === 'transcribing' && (
+                        <span className="inline-flex items-center gap-1.5 text-primary font-label text-xs font-semibold px-2 py-1">
+                           Transcribing...
                         </span>
                       )}
                       {doc.status === 'failed' && (

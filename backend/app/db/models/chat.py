@@ -27,3 +27,12 @@ class ChatMessage(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("ChatSession", back_populates="messages")
+
+class SharedKnowledgeStaging(Base):
+    __tablename__ = "shared_knowledge_staging"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_query = Column(String)
+    ai_response = Column(String)
+    status = Column(String, default="pending") # pending, approved, rejected
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

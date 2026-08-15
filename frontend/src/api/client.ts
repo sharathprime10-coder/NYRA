@@ -16,4 +16,27 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+import toast from 'react-hot-toast';
+
+// Interceptor to handle global API errors
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response) {
+            const status = error.response.status;
+            if (status === 401) {
+                // Clear token and force reload to login
+                localStorage.removeItem('token');
+                window.location.href = '/';
+            } else if (status >= 500) {
+                toast.error("An unexpected server error occurred. Please try again later.");
+            }
+        } else if (error.request) {
+            // Network error (no response received)
+            toast.error("Network error. Please check your connection.");
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

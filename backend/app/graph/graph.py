@@ -3,8 +3,7 @@ from typing import Literal
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import START, StateGraph, END
-from langgraph.checkpoint.postgres import PostgresSaver
-from psycopg_pool import ConnectionPool
+
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
 
@@ -32,8 +31,15 @@ class Router(BaseModel):
     )
 
 class CriticReview(BaseModel):
-    passed: bool = Field(description="Whether the draft accurately answers the prompt without hallucinations.")
-    feedback: str = Field(description="Feedback on why it failed, or empty if it passed.")
+    passed: bool = Field(description="Set to true if the draft is good. Set to false if it has problems.")
+    feedback: str = Field(default="", description="Feedback on why it failed, or empty if it passed.")
+    
+    @classmethod
+    def model_validate(cls, obj, *args, **kwargs):
+        # Groq sometimes returns 'false'/'true' strings instead of booleans
+        if isinstance(obj, dict) and isinstance(obj.get('passed'), str):
+            obj['passed'] = obj['passed'].lower() in ('true', '1', 'yes')
+        return super().model_validate(obj, *args, **kwargs)
 
 def supervisor_node(state: NYRAState, config=None):
     """Orchestrator that routes to the appropriate specialist agent."""
@@ -42,8 +48,24 @@ def supervisor_node(state: NYRAState, config=None):
     # If thinking level is low, bypass reasoning and immediately draft
     if thinking_level == "low":
         return {"sender": "supervisor", "next_node": "writer"}
-        
+    
     messages = state["messages"]
+    
+    # CRITICAL: If any system message mentions a document, ALWAYS route to researcher
+    # so the rag_tool is used to actually read the document content
+    for msg in messages:
+        if isinstance(msg, SystemMessage) and any(kw in msg.content.lower() for kw in ["document", "pdf", "rag_tool", "attached"]):
+            return {"sender": "supervisor", "next_node": "researcher"}
+    
+    # Also check user message for document/summarize keywords
+    last_user_msg = ""
+    for msg in reversed(messages):
+        if isinstance(msg, HumanMessage):
+            last_user_msg = msg.content.lower()
+            break
+    if any(kw in last_user_msg for kw in ["summarize", "pdf", "document", "file", "upload", "read", "extract", "according to"]):
+        return {"sender": "supervisor", "next_node": "researcher"}
+        
     system_msg = SystemMessage(
         content="You are the NYRA Orchestrator. Analyze the conversation. "
                 "If the user asks a factual question, needs calculations, or document retrieval, route to 'researcher'. "
@@ -53,7 +75,7 @@ def supervisor_node(state: NYRAState, config=None):
     # Use structured output for routing
     router_llm_structured = llm_router.with_structured_output(Router)
     try:
-        decision = router_llm_structured.invoke([system_msg] + messages[-10:], config=config)
+        decision = router_llm_structured.invoke([system_msg] + messages[-5:], config=config)
         next_agent = decision.next_agent
     except Exception as e:
         import logging
@@ -63,22 +85,28 @@ def supervisor_node(state: NYRAState, config=None):
     # We don't add the supervisor's thought to the message history, just route it
     return {"sender": "supervisor", "next_node": next_agent}
 
-def researcher_node(state: NYRAState, config=None):
-    """Agent specifically bound to tools to gather information."""
+async def researcher_node(state: NYRAState, config=None):
+    """Gathers facts and uses tools to build up a knowledge context."""
     messages = state["messages"]
     system_msg = SystemMessage(
-        content="You are the NYRA Researcher. Your ONLY job is to use tools to gather facts, search the web, or read files. "
+        content="You are the NYRA Researcher. Your job is to gather accurate, detailed information to answer the user's query.\n"
+                "Use the provided tools if needed. If no tools are needed, provide a detailed summary of your findings based on your knowledge.\n"
                 "Do NOT write a conversational response to the user. Just gather the data.\n"
                 "CRITICAL INSTRUCTION: You MUST use native JSON tool calling capabilities provided by the API. "
-                "NEVER output XML tags like `<function>` or `<tool>`. Your tool calls must be valid JSON."
+                "Your tool calls must be valid JSON."
     )
     
-    # Late bind tools to ensure MCP is loaded
-    tools = get_all_tools()
-    llm_with_tools = llm.bind_tools(tools)
+    # Late bind tools to ensure MCP is loaded with user_id
+    user_id = config.get("configurable", {}).get("user_id") if config else None
+    tools = await get_all_tools(user_id=user_id)
+    
+    # We must bind tools before creating fallbacks, so we get a fresh LLM instance here
+    from app.core.llm_factory import get_frontier_llm
+    llm_with_tools = get_frontier_llm(tools=tools)
     
     try:
-        response = llm_with_tools.invoke([system_msg] + messages[-10:], config=config)
+        # Limit history to last 5 messages to save tokens
+        response = await llm_with_tools.ainvoke([system_msg] + messages[-5:], config=config)
         return {"messages": [response], "sender": "researcher", "error_retries": 0}
     except Exception as e:
         import logging
@@ -96,70 +124,106 @@ def researcher_node(state: NYRAState, config=None):
 def writer_node(state: NYRAState, config=None):
     """Drafts the final response to the user."""
     thinking_level = config.get("configurable", {}).get("thinking_level", "medium") if config else "medium"
+    tone = config.get("configurable", {}).get("tone", "default") if config else "default"
     messages = state["messages"]
     
-    content = "You are the NYRA Writer. Your job is to draft a helpful, professional, and accurate response to the user. "
-    content += "Use the conversation history and any data provided by the researcher. Output your response clearly in markdown."
+    # Extract tool results to inject directly into the writer's context
+    tool_context = ""
+    low_confidence = False
     
-    if thinking_level == "high":
-        content += "\nCRITICAL INSTRUCTION: You MUST use deep Chain-of-Thought reasoning. First, analyze all constraints and facts in a `<thought>` block. Then, write your response."
+    from langchain_core.messages import ToolMessage
+    import json
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            try:
+                data = json.loads(msg.content)
+                if "confidence" in data and data["confidence"] == "Low":
+                    low_confidence = True
+                    
+                if "context" in data:
+                    context_str = "
+
+".join(data["context"])
+                    tool_context += f"
+--- RETRIEVED DATA ---
+{context_str}
+"
+                else:
+                    tool_context += f"
+--- RETRIEVED DATA ---
+{msg.content}
+"
+            except Exception:
+                tool_context += f"
+--- RETRIEVED DATA ---
+{msg.content}
+"
+    
+    content = ""
+    if tone == "sassy":
+        content += (
+            "You are NYRA - sharp, witty, and a little sassy, but never at the cost of "
+            "being genuinely useful. Think 'brilliant friend who can't resist a dry remark,' "
+            "not 'chatbot doing a bit.'
+
+"
+            "Personality rules:
+"
+            "- Default to helpful and direct. Sass is seasoning, not the meal.
+"
+            "- Dry wit, deadpan asides, gentle teasing about obviously bad ideas - yes.
+"
+            "- Mocking the user, being condescending, or being sarcastic about something "
+            "they're genuinely struggling with - no.
+"
+            "- If the user's message signals stress, frustration, or something serious "
+            "(exams, deadlines, errors blocking their work, personal topics), drop the "
+            "sass entirely and just help.
+"
+            "- Never let personality replace accuracy - a sassy wrong answer is still wrong.
+"
+            "- Keep it to a line or two of flavor, not a running commentary track.
+
+"
+            "Examples of the tone:
+"
+            "- Instead of 'I don't have that information': 'That one's above my pay grade - "
+            "I don't have access to that.'
+"
+            "- Instead of 'That's incorrect': 'Bold claim, but the data disagrees with you.'
+
+"
+        )
         
+    content += "You are the NYRA Writer. Your job is to draft a helpful, professional, and accurate response to the user. "
+    content += "Use the conversation history and the RETRIEVED DATA below to write your response. Output your response clearly in markdown.
+"
+    
+    if low_confidence:
+        content += "CRITICAL: The retrieved data DOES NOT contain sufficient information to answer the user's question. You MUST explicitly state that the documents do not have enough information, rather than guessing or answering from general knowledge. Be polite but firm about this limitation.
+"
+    else:
+        content += "CRITICAL: You MUST directly answer the user's question using the retrieved data. Do NOT tell the user to summarize it themselves.
+"
+        content += "CRITICAL: Incorporate the information seamlessly into your answer as if it were your own knowledge. Do NOT mention your internal tools, 'rag_tool', or your retrieval process to the user.
+"
+        content += "CRITICAL GROUNDING INSTRUCTION: For EVERY factual sentence you write that is sourced from the RETRIEVED DATA, you MUST append an inline citation marker (e.g. [1], [2]) indicating the source. If a sentence is general knowledge and not found in the documents, explicitly flag it as general knowledge and do not use a citation marker.
+"
+    
+    if tool_context:
+        content += f"
+{tool_context}"
+    
     system_msg = SystemMessage(content=content)
     
-    # Select the model based on thinking level
-    current_writer_llm = get_fast_llm() if thinking_level == "low" else llm_writer
-    
     try:
-        response = current_writer_llm.invoke([system_msg] + messages[-10:], config=config)
-        return {"messages": [AIMessage(content=response.content)], "draft": response.content, "sender": "writer"}
+        response = llm_writer.invoke([system_msg] + messages[-10:], config=config)
+        return {"messages": [response], "sender": "writer"}
     except Exception as e:
         import logging
-        error_text = f"I'm sorry, but I encountered an internal error: {str(e)}"
-        return {"messages": [AIMessage(content=error_text)], "draft": error_text, "sender": "writer"}
+        logging.error(f"Writer LLM failed: {e}")
+        return {"messages": [AIMessage(content=f"Error generating response: {str(e)}")], "sender": "writer"}
 
-def critic_node(state: NYRAState, config=None):
-    """Evaluates the writer's draft for quality and accuracy."""
-    draft = state.get("draft", "")
-    messages = state["messages"]
-    attempts = state.get("critic_attempts", 0) or 0
-    
-    system_msg = SystemMessage(
-        content=f"You are the NYRA Critic. Evaluate the following draft response:\n\n{draft}\n\n"
-                f"Does this draft directly and accurately answer the user's latest prompt based on the context? "
-                f"Ensure there are no hallucinations."
-    )
-    
-    evaluator_llm = llm_critic.with_structured_output(CriticReview)
-    try:
-        review = evaluator_llm.invoke([system_msg] + messages[-10:], config=config)
-    except Exception as e:
-        import logging
-        logging.error(f"Critic LLM failed: {e}")
-        # If the critic fails, we'll just assume it passed to avoid an infinite loop
-        return {"messages": [AIMessage(content=draft)], "sender": "critic", "next_node": "FINISH", "critic_attempts": attempts + 1}
-    
-    if review.passed:
-        # If passed, we finally append the draft to the message history as an AIMessage
-        return {"messages": [AIMessage(content=draft)], "sender": "critic", "next_node": "FINISH", "critic_attempts": attempts + 1}
-    else:
-        # If failed, add the feedback to the context for the writer
-        feedback_msg = HumanMessage(content=f"CRITIC FEEDBACK: The draft was rejected. Reason: {review.feedback}. Please rewrite it.")
-        return {"messages": [feedback_msg], "sender": "critic", "next_node": "writer", "critic_attempts": attempts + 1}
-
-# Create a lazy loader class that inherits from ToolNode but defers tool resolution
-class LazyToolNode:
-    def __init__(self, get_tools_func):
-        self.get_tools_func = get_tools_func
-        self._node = None
-        
-    def __call__(self, state, config=None):
-        if not self._node:
-            self._node = ToolNode(self.get_tools_func())
-        return self._node.invoke(state, config=config)
-
-tool_node = LazyToolNode(get_all_tools)
-
-# Routing logic
 def route_from_supervisor(state: NYRAState):
     return state.get("next_node", "writer")
 
@@ -181,9 +245,12 @@ def route_from_researcher(state: NYRAState):
 def route_from_writer(state: NYRAState, config=None):
     thinking_level = config.get("configurable", {}).get("thinking_level", "medium") if config else "medium"
     attempts = state.get("critic_attempts", 0) or 0
+    tool_invoked = state.get("tool_invoked", False)
     
     if thinking_level == "low":
         return "FINISH"
+    elif thinking_level == "medium" and not tool_invoked:
+        return "FINISH" # Skip critic for medium conversational turns without factual tool data
     elif thinking_level == "medium" and attempts >= 1:
         return "FINISH" # Only 1 critic loop for medium
     elif thinking_level == "high" and attempts >= 3:
@@ -228,18 +295,8 @@ graph.add_conditional_edges("critic", route_from_critic, {
     "FINISH": END
 })
 
-import psycopg
+from langgraph.checkpoint.memory import MemorySaver
 
-# Checkpointer
-# Supabase transaction pooler (6543) can hang psycopg_pool. Use session port (5432).
-langgraph_db_url = settings.DATABASE_URL.replace(":6543", ":5432")
-
-# Run setup in a dedicated autocommit connection to avoid transaction block errors 
-# with CREATE INDEX CONCURRENTLY
-with psycopg.connect(langgraph_db_url, autocommit=True) as conn:
-    PostgresSaver(conn).setup()
-
-pool = ConnectionPool(conninfo=langgraph_db_url)
-checkpointer = PostgresSaver(pool)
+checkpointer = MemorySaver()
 
 nyra_graph = graph.compile(checkpointer=checkpointer)
