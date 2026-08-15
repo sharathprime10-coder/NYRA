@@ -1,6 +1,6 @@
 # NYRA - Premium Agentic Knowledge Assistant
 
-[![CI Pipeline](https://github.com/your-org/app_chatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/app_chatbot/actions/workflows/ci.yml)
+[![CI Pipeline](https://github.com/sharathprime10-coder/NYRA/actions/workflows/ci.yml/badge.svg)](https://github.com/sharathprime10-coder/NYRA/actions/workflows/ci.yml)
 
 NYRA is a state-of-the-art, AI-powered knowledge assistant featuring a highly interactive 3D glassmorphism UI, Retrieval-Augmented Generation (RAG), and Model Context Protocol (MCP) capabilities. 
 
