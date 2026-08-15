@@ -35,7 +35,7 @@ jobs:
       
     - name: Run Pytest
       working-directory: ./backend
-      run: pytest tests/
+      run: python -m pytest tests/
       
   security-scans:
     runs-on: ubuntu-latest
