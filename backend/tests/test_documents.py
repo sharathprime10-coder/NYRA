@@ -6,12 +6,12 @@ from app.db.models.user import User
 
 
 def get_auth_token(client, db_session, email="docuser@example.com"):
-    user = db_session.query(User).filter(User.email == email).first()
+    user = db_session.query(User).filter(User.username == email).first()
     if not user:
         user = User(
-            email=email,
-            hashed_password=get_password_hash("password123"),
-            name="Doc User",
+            username=email,
+            password_hash=get_password_hash("password123"),
+            display_name="Doc User",
         )
         db_session.add(user)
         db_session.commit()
@@ -30,34 +30,30 @@ def test_upload_invalid_extension(client, db_session):
     file.name = "test.exe"
 
     response = client.post(
-        "/api/documents/",
+        "/api/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
         files={"file": ("test.exe", file, "application/x-msdownload")},
     )
 
     assert response.status_code == 400
-    assert "File extension not allowed" in response.json()["detail"]
+    assert "File type .exe not allowed" in response.json()["detail"]
 
 
 def test_list_documents_ownership(client, db_session):
     token1 = get_auth_token(client, db_session, "user1@example.com")
     token2 = get_auth_token(client, db_session, "user2@example.com")
 
-    user1 = db_session.query(User).filter(User.email == "user1@example.com").first()
-    user2 = db_session.query(User).filter(User.email == "user2@example.com").first()
+    user1 = db_session.query(User).filter(User.username == "user1@example.com").first()
+    user2 = db_session.query(User).filter(User.username == "user2@example.com").first()
 
     # Create documents
     doc1 = Document(
         filename="doc1.pdf",
-        content_type="application/pdf",
-        file_path="/fake/doc1.pdf",
         user_id=user1.id,
         status="ready",
     )
     doc2 = Document(
         filename="doc2.pdf",
-        content_type="application/pdf",
-        file_path="/fake/doc2.pdf",
         user_id=user2.id,
         status="ready",
     )

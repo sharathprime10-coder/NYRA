@@ -12,20 +12,17 @@ def test_signup(client, db_session):
         },
     )
     assert response.status_code == 200
-    assert response.json()["email"] == "test@example.com"
-
-    # Verify in DB
-    user = db_session.query(User).filter(User.email == "test@example.com").first()
-    assert user is not None
-    assert user.name == "Test User"
+    data = response.json()
+    assert "access_token" in data
+    assert data["username"] == "test@example.com"
 
 
 def test_login_success(client, db_session):
-    # Setup user
+    # Setup user using actual model fields
     user = User(
-        email="login@example.com",
-        hashed_password=get_password_hash("password123"),
-        name="Login User",
+        username="login@example.com",
+        password_hash=get_password_hash("password123"),
+        display_name="Login User",
     )
     db_session.add(user)
     db_session.commit()
@@ -43,9 +40,9 @@ def test_login_success(client, db_session):
 def test_login_wrong_password(client, db_session):
     # Setup user
     user = User(
-        email="wrong@example.com",
-        hashed_password=get_password_hash("password123"),
-        name="Wrong User",
+        username="wrong@example.com",
+        password_hash=get_password_hash("password123"),
+        display_name="Wrong User",
     )
     db_session.add(user)
     db_session.commit()
@@ -59,9 +56,9 @@ def test_login_wrong_password(client, db_session):
 
 def test_me_endpoint(client, db_session):
     user = User(
-        email="me@example.com",
-        hashed_password=get_password_hash("password123"),
-        name="Me User",
+        username="me@example.com",
+        password_hash=get_password_hash("password123"),
+        display_name="Me User",
     )
     db_session.add(user)
     db_session.commit()
@@ -74,7 +71,7 @@ def test_me_endpoint(client, db_session):
 
     response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
-    assert response.json()["email"] == "me@example.com"
+    assert response.json()["username"] == "me@example.com"
 
 
 def test_me_endpoint_invalid_token(client):

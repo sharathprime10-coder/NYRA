@@ -1,18 +1,21 @@
 import uuid
 
 from sqlalchemy import Column, DateTime, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.database import Base
 
+# Use String(36) for UUID: compatible with both PostgreSQL and SQLite
+_UUID_TYPE = String(36)
+
+
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    user_id = Column(_UUID_TYPE, ForeignKey("users.id"))
     title = Column(String, default="New Chat")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -25,8 +28,8 @@ class ChatSession(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id"))
+    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    session_id = Column(_UUID_TYPE, ForeignKey("chat_sessions.id"))
     role = Column(String)  # 'user' or 'ai'
     content = Column(String)
     sources = Column(String, nullable=True)  # JSON serialized string of sources
@@ -38,7 +41,7 @@ class ChatMessage(Base):
 class SharedKnowledgeStaging(Base):
     __tablename__ = "shared_knowledge_staging"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
     user_query = Column(String)
     ai_response = Column(String)
     status = Column(String, default="pending")  # pending, approved, rejected
