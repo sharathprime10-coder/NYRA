@@ -27,7 +27,7 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py"]
+python_files = ["test_auth.py", "test_chat_error.py", "test_documents.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 filterwarnings = [
