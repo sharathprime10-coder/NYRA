@@ -146,9 +146,10 @@ def get_fast_llm():
     Primary: Groq LLaMA 3.1 8B Instant
     Fallback: Google Gemini
     """
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_groq import ChatGroq
+
     if settings.GROQ_API_KEY:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        from langchain_groq import ChatGroq
 
         fast_llm = ChatGroq(
             model="llama-3.1-8b-instant",
