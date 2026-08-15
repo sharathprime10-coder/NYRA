@@ -12,11 +12,12 @@ pydantic[email]>=2.4.2
 pydantic-settings>=2.0.3
 langchain>=0.0.334
 langchain-google-genai>=0.0.3
+langchain-groq>=1.1.0
+langchain-community
+langchain-chroma
 pypdf>=3.17.1
 alembic>=1.12.1
 chromadb
-langchain-community
-langchain-chroma
 slowapi
 pytest
 httpx
@@ -29,4 +30,5 @@ sentry-sdk
 rank_bm25
 flashrank
 groq
+ddgs
 langchain-mcp-adapters
