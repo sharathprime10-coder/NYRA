@@ -25,10 +25,10 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 # ---------------------------------------------------------------------------
 # Import app modules AFTER env vars are set
 # ---------------------------------------------------------------------------
+from app.core.rate_limit import limiter  # noqa: E402
 from app.db.database import Base, get_db  # noqa: E402
 from app.db.models import advanced, chat, document, user  # noqa: F401, E402
 from app.main import app  # noqa: E402
-from app.core.rate_limit import limiter  # noqa: E402
 
 # Disable rate limiting for tests
 limiter.enabled = False
