@@ -41,8 +41,12 @@ class Router(BaseModel):
 
 
 class CriticReview(BaseModel):
-    passed: bool = Field(description="Set to true if the draft is good. Set to false if it has problems.")
-    feedback: str = Field(default="", description="Feedback on why it failed, or empty if it passed.")
+    passed: bool = Field(
+        description="Set to true if the draft is good. Set to false if it has problems."
+    )
+    feedback: str = Field(
+        default="", description="Feedback on why it failed, or empty if it passed."
+    )
 
     @classmethod
     def model_validate(cls, obj, *args, **kwargs):
@@ -54,7 +58,11 @@ class CriticReview(BaseModel):
 
 def supervisor_node(state: NYRAState, config=None):
     """Orchestrator that routes to the appropriate specialist agent."""
-    thinking_level = config.get("configurable", {}).get("thinking_level", "medium") if config else "medium"
+    thinking_level = (
+        config.get("configurable", {}).get("thinking_level", "medium")
+        if config
+        else "medium"
+    )
 
     # If thinking level is low, bypass reasoning and immediately draft
     if thinking_level == "low":
@@ -66,7 +74,8 @@ def supervisor_node(state: NYRAState, config=None):
     # so the rag_tool is used to actually read the document content
     for msg in messages:
         if isinstance(msg, SystemMessage) and any(
-            kw in msg.content.lower() for kw in ["document", "pdf", "rag_tool", "attached"]
+            kw in msg.content.lower()
+            for kw in ["document", "pdf", "rag_tool", "attached"]
         ):
             return {"sender": "supervisor", "next_node": "researcher"}
 
@@ -76,7 +85,19 @@ def supervisor_node(state: NYRAState, config=None):
         if isinstance(msg, HumanMessage):
             last_user_msg = msg.content.lower()
             break
-    if any(kw in last_user_msg for kw in ["summarize", "pdf", "document", "file", "upload", "read", "extract", "according to"]):
+    if any(
+        kw in last_user_msg
+        for kw in [
+            "summarize",
+            "pdf",
+            "document",
+            "file",
+            "upload",
+            "read",
+            "extract",
+            "according to",
+        ]
+    ):
         return {"sender": "supervisor", "next_node": "researcher"}
 
     system_msg = SystemMessage(
@@ -90,7 +111,9 @@ def supervisor_node(state: NYRAState, config=None):
     # Use structured output for routing
     router_llm_structured = llm_router.with_structured_output(Router)
     try:
-        decision = router_llm_structured.invoke([system_msg] + messages[-5:], config=config)
+        decision = router_llm_structured.invoke(
+            [system_msg] + messages[-5:], config=config
+        )
         next_agent = decision.next_agent
     except Exception as e:
         logging.error(f"Supervisor LLM failed: {e}")
@@ -122,7 +145,9 @@ async def researcher_node(state: NYRAState, config=None):
 
     try:
         # Limit history to last 5 messages to save tokens
-        response = await llm_with_tools.ainvoke([system_msg] + messages[-5:], config=config)
+        response = await llm_with_tools.ainvoke(
+            [system_msg] + messages[-5:], config=config
+        )
         return {"messages": [response], "sender": "researcher", "error_retries": 0}
     except Exception as e:
         logging.error(f"Researcher LLM failed: {e}")
@@ -137,10 +162,19 @@ async def researcher_node(state: NYRAState, config=None):
                     "for your tool calls without any markdown tags."
                 )
             )
-            return {"messages": [error_msg], "sender": "researcher", "error_retries": retries + 1, "next_node": "self_correct"}
+            return {
+                "messages": [error_msg],
+                "sender": "researcher",
+                "error_retries": retries + 1,
+                "next_node": "self_correct",
+            }
         else:
             return {
-                "messages": [AIMessage(content=f"Error gathering data after multiple attempts: {str(e)}")],
+                "messages": [
+                    AIMessage(
+                        content=f"Error gathering data after multiple attempts: {str(e)}"
+                    )
+                ],
                 "sender": "researcher",
                 "next_node": "writer",
             }
@@ -148,8 +182,14 @@ async def researcher_node(state: NYRAState, config=None):
 
 def writer_node(state: NYRAState, config=None):
     """Drafts the final response to the user."""
-    thinking_level = config.get("configurable", {}).get("thinking_level", "medium") if config else "medium"  # noqa: F841
-    tone = config.get("configurable", {}).get("tone", "default") if config else "default"
+    thinking_level = (
+        config.get("configurable", {}).get("thinking_level", "medium")
+        if config
+        else "medium"
+    )  # noqa: F841
+    tone = (
+        config.get("configurable", {}).get("tone", "default") if config else "default"
+    )
     messages = state["messages"]
 
     # Extract tool results to inject directly into the writer's context
@@ -222,7 +262,11 @@ def writer_node(state: NYRAState, config=None):
     except Exception as e:
         logging.error(f"Writer LLM failed: {e}")
         error_text = f"Error generating response: {str(e)}"
-        return {"messages": [AIMessage(content=error_text)], "draft": error_text, "sender": "writer"}
+        return {
+            "messages": [AIMessage(content=error_text)],
+            "draft": error_text,
+            "sender": "writer",
+        }
 
 
 def critic_node(state: NYRAState, config=None):
@@ -245,17 +289,30 @@ def critic_node(state: NYRAState, config=None):
 
         if review.passed:
             # If passed, we finally append the draft to the message history as an AIMessage
-            return {"messages": [AIMessage(content=draft)], "sender": "critic", "next_node": "FINISH"}
+            return {
+                "messages": [AIMessage(content=draft)],
+                "sender": "critic",
+                "next_node": "FINISH",
+            }
         else:
             # If failed, add the feedback to the context for the writer
             feedback_msg = HumanMessage(
                 content=f"CRITIC FEEDBACK: The draft was rejected. Reason: {review.feedback}. Please rewrite it."
             )
-            return {"messages": [feedback_msg], "sender": "critic", "next_node": "writer", "critic_attempts": attempts + 1}
+            return {
+                "messages": [feedback_msg],
+                "sender": "critic",
+                "next_node": "writer",
+                "critic_attempts": attempts + 1,
+            }
     except Exception as e:
         # Fallback if critic fails
         logging.error(f"Critic LLM failed: {e}")
-        return {"messages": [AIMessage(content=draft)], "sender": "critic", "next_node": "FINISH"}
+        return {
+            "messages": [AIMessage(content=draft)],
+            "sender": "critic",
+            "next_node": "FINISH",
+        }
 
 
 # Create a lazy loader class that inherits from ToolNode but defers tool resolution
@@ -294,7 +351,11 @@ def route_from_researcher(state: NYRAState):
 
 
 def route_from_writer(state: NYRAState, config=None):
-    thinking_level = config.get("configurable", {}).get("thinking_level", "medium") if config else "medium"
+    thinking_level = (
+        config.get("configurable", {}).get("thinking_level", "medium")
+        if config
+        else "medium"
+    )
     attempts = state.get("critic_attempts", 0) or 0
     tool_invoked = state.get("tool_invoked", False)
 
@@ -326,27 +387,43 @@ graph.add_node("tools", tool_node)
 # Connect edges
 graph.add_edge(START, "supervisor")
 
-graph.add_conditional_edges("supervisor", route_from_supervisor, {
-    "researcher": "researcher",
-    "writer": "writer",
-})
+graph.add_conditional_edges(
+    "supervisor",
+    route_from_supervisor,
+    {
+        "researcher": "researcher",
+        "writer": "writer",
+    },
+)
 
-graph.add_conditional_edges("researcher", route_from_researcher, {
-    "tools": "tools",
-    "writer": "writer",
-    "self_correct": "researcher",
-})
+graph.add_conditional_edges(
+    "researcher",
+    route_from_researcher,
+    {
+        "tools": "tools",
+        "writer": "writer",
+        "self_correct": "researcher",
+    },
+)
 graph.add_edge("tools", "researcher")
 
-graph.add_conditional_edges("writer", route_from_writer, {
-    "critic": "critic",
-    "FINISH": END,
-})
+graph.add_conditional_edges(
+    "writer",
+    route_from_writer,
+    {
+        "critic": "critic",
+        "FINISH": END,
+    },
+)
 
-graph.add_conditional_edges("critic", route_from_critic, {
-    "writer": "writer",
-    "FINISH": END,
-})
+graph.add_conditional_edges(
+    "critic",
+    route_from_critic,
+    {
+        "writer": "writer",
+        "FINISH": END,
+    },
+)
 
 checkpointer = MemorySaver()
 nyra_graph = graph.compile(checkpointer=checkpointer)

@@ -34,7 +34,6 @@ from app.core.rate_limit import limiter  # noqa: E402
 limiter.enabled = False
 
 
-
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     """Create all tables in the SQLite test database."""

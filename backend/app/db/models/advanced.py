@@ -13,7 +13,9 @@ _UUID_TYPE = String(36)
 class Memory(Base):
     __tablename__ = "memories"
 
-    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    id = Column(
+        _UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True
+    )
     user_id = Column(_UUID_TYPE, ForeignKey("users.id"))
     content = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -23,7 +25,9 @@ class Memory(Base):
 class AgentRun(Base):
     __tablename__ = "agent_runs"
 
-    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    id = Column(
+        _UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True
+    )
     user_id = Column(_UUID_TYPE, ForeignKey("users.id"))
     session_id = Column(_UUID_TYPE, ForeignKey("chat_sessions.id"))
     trace_id = Column(String, index=True)
@@ -35,7 +39,9 @@ class AgentRun(Base):
 class ToolCall(Base):
     __tablename__ = "tool_calls"
 
-    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    id = Column(
+        _UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True
+    )
     agent_run_id = Column(_UUID_TYPE, ForeignKey("agent_runs.id"))
     tool_name = Column(String)
     arguments = Column(JSONB)
@@ -47,7 +53,9 @@ class ToolCall(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    id = Column(
+        _UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True
+    )
     user_id = Column(_UUID_TYPE, ForeignKey("users.id"), nullable=True)
     action = Column(String)
     resource_type = Column(String)

@@ -22,7 +22,9 @@ from app.tools.mcp_client import cleanup_mcp, initialize_mcp
 logger = setup_logging()
 
 
-def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+def _rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
     """Return a 429 JSON response when a rate limit is exceeded."""
     return JSONResponse(
         status_code=429,

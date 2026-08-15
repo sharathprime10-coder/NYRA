@@ -19,7 +19,10 @@ async def test():
     )
     with open("test_graph_output.txt", "w", encoding="utf-8") as f:
         f.write("ALL MESSAGES IN RESULT:\n")
-        f.writelines(f'[{i}] {type(m).__name__}: {m.content!r} (name: {getattr(m, "name", None)})\n' for i, m in enumerate(result["messages"]))
+        f.writelines(
+            f'[{i}] {type(m).__name__}: {m.content!r} (name: {getattr(m, "name", None)})\n'
+            for i, m in enumerate(result["messages"])
+        )
 
 
 asyncio.run(test())

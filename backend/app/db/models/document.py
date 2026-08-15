@@ -13,7 +13,9 @@ _UUID_TYPE = String(36)
 class Document(Base):
     __tablename__ = "documents"
 
-    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    id = Column(
+        _UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True
+    )
     filename = Column(String, index=True)
     user_id = Column(_UUID_TYPE, ForeignKey("users.id"))
     status = Column(String, default="uploaded")  # uploaded, processing, ready, failed

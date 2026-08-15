@@ -13,7 +13,9 @@ _UUID_TYPE = String(36)
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(_UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    id = Column(
+        _UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()), index=True
+    )
     username = Column(String, unique=True, index=True)
     password_hash = Column(String)
     display_name = Column(String, nullable=True)
