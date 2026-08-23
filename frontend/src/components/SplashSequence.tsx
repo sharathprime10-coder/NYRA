@@ -43,7 +43,7 @@ const SplashSequence: React.FC<SplashSequenceProps> = ({ onComplete }) => {
                 {/* Custom slick animated logo */}
                 <div className="relative w-40 h-40">
                   <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse"></div>
-                  <img src="/logo.webp" alt="NYRA" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(47,217,244,0.6)] relative z-10 rounded-2xl" />
+                  <img src="/nyra_logo.jpg" alt="NYRA" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(47,217,244,0.6)] relative z-10 rounded-2xl" />
                 </div>
                 <h1 className="font-display text-6xl font-extrabold tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-white via-primary-container to-white">NYRA</h1>
               </motion.div>

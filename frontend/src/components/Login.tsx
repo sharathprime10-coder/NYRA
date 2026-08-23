@@ -61,7 +61,7 @@ const Login: React.FC = () => {
         <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-[64px]">
           <div className="relative z-10">
             <div className="w-24 h-24 mb-4 rounded-xl overflow-hidden glass-panel flex items-center justify-center p-2">
-              <img src="/logo.webp" alt="NYRA Logo" className="w-full h-full object-contain" />
+              <img src="/nyra_logo.jpg" alt="NYRA Logo" className="w-full h-full object-contain" />
             </div>
             <p className="font-body text-lg text-on-surface-variant mt-2 max-w-md">Premium Knowledge Assistant. Enter the nexus of infinite data.</p>
           </div>
@@ -78,7 +78,7 @@ const Login: React.FC = () => {
           {/* Mobile Branding (Hidden on Desktop) */}
           <div className="absolute top-8 left-8 lg:hidden">
             <div className="w-16 h-16 rounded-lg overflow-hidden glass-panel flex items-center justify-center p-1.5">
-              <img src="/logo.webp" alt="NYRA Logo" className="w-full h-full object-contain" />
+              <img src="/nyra_logo.jpg" alt="NYRA Logo" className="w-full h-full object-contain" />
             </div>
           </div>
 
@@ -86,7 +86,7 @@ const Login: React.FC = () => {
             <div className="glass-panel w-full rounded-xl p-8 lg:p-10 flex flex-col gap-8 transform-style-preserve-3d">
               <div className="space-y-2" style={{ transform: "translateZ(30px)" }}>
               <div className="w-16 h-16 mb-6 rounded-lg overflow-hidden glass-panel flex items-center justify-center p-1.5 mx-auto lg:mx-0">
-                <img src="/logo.webp" alt="NYRA Logo" className="w-full h-full object-contain" />
+                <img src="/nyra_logo.jpg" alt="NYRA Logo" className="w-full h-full object-contain" />
               </div>
               <h2 className="font-display text-2xl font-semibold text-on-surface">Login to your workspace</h2>
               <div className="relative h-16 w-full overflow-hidden">

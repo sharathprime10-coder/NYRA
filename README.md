@@ -137,12 +137,9 @@ flowchart TD
 
 ## Local Development Setup
 
-### 1. Database (PostgreSQL & Redis)
-Ensure Docker is installed and running.
-```bash
-cd backend
-docker-compose up -d
-```
+### 1. Database (Supabase PostgreSQL & Redis)
+NYRA is configured to use a managed Supabase PostgreSQL instance with `pgvector` enabled.
+Ensure your `DATABASE_URL` in `.env` points to your Supabase instance.
 
 ### 2. Backend Setup
 Create a virtual environment and install dependencies:
@@ -207,7 +204,7 @@ npm run build
 ## Deployment Guide
 - **Frontend:** Designed to be deployed on **Vercel**. Ensure environment variables are set in the Vercel dashboard.
 - **Backend:** Designed for platforms like **Render**, **Railway**, or **AWS/GCP**. Requires a managed PostgreSQL database with `pgvector` support (e.g., Supabase, Neon.tech).
-- **Database:** Migrate local Docker PostgreSQL to a managed cloud database and update the `DATABASE_URL`.
+- **Database:** Ensure you have a managed cloud database (like Supabase) with `pgvector` enabled and `DATABASE_URL` configured in your `.env`.
 
 ## Known Limitations
 - **Cost-Optimization:** Multi-provider fallback cascade is currently active; Groq and Gemini models are heavily utilized which can scale rapidly in cost during intensive agentic loops.

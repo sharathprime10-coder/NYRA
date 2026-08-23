@@ -35,11 +35,10 @@ The transition will happen in phases, preserving the existing React UI completel
 
 ## Assumptions
 - The frontend UI will NOT be modified.
-- Deployment infrastructure is not required (Local Docker-Compose only).
+- Deployment infrastructure is not required (Supabase Managed DB is used).
 - We have the right to refactor the Python backend entirely as long as the API boundaries remain stable for the frontend.
 
 ## Dependencies
 - `psycopg2-binary`, `alembic`, `pgvector` for DB.
 - `langgraph`, `langchain` for orchestration.
 - `mcp` SDK for the server/client architecture.
-- `docker` for local PostgreSQL/Redis standing.

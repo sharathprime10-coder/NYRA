@@ -218,6 +218,9 @@ async def send_message(
                     "writer",
                     "critic",
                 ]:
+                    if name == "writer":
+                        final_answer = ""
+                        yield f"data: {json.dumps({'event': 'clear'})}\n\n"
                     yield f"data: {json.dumps({'event': 'status', 'node': name})}\n\n"
 
                 # Stream writer node output

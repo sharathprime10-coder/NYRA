@@ -8,7 +8,7 @@ const Sidebar: React.FC = () => {
       {/* Header */}
       <div className="mb-8 flex items-center gap-4 hover-lock p-2 rounded-xl cursor-pointer">
         <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-surface-container">
-          <img alt="NYRA Logo" className="w-8 h-8 object-contain drop-shadow-lg rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1owtDrGiK0eLLr0TiFNNHaZuvX2WhyFxW8q0XM6csuaJeTvZUOHW-0sv9XITQuO8qC31-UYdvXXHJ7gaCZEpZjyR-U0sH8d4pym7yY3-wHcl2eTjwtjBz1x5MFjsJFCFWK4A3-Ld9s9NLGxYvyrRzudMezd2ptn2NMrhuOrKh-5D_QVEa1bZahSL5bXJ5rAROMZ_3-PFnuR7qt1Lwhm6IkpFVT-AY0--f1jDzEQtr361yI64qWV1DUvOjviMQAKyEkag" />
+          <img alt="NYRA Logo" className="w-8 h-8 object-contain drop-shadow-lg rounded-lg" src="/nyra_logo.jpg" />
         </div>
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tighter text-on-surface">NYRA</h1>

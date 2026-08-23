@@ -11,6 +11,7 @@ import rehypeKatex from 'rehype-katex';
 import { useParams } from 'react-router-dom';
 import { useSpeechToText } from '../hooks/useSpeechToText';
 import { PromptCoach } from './PromptCoach';
+import { VoiceOrbOverlay } from './voice-orb/VoiceOrbOverlay';
 
 interface Source {
   document_id?: number;
@@ -76,6 +77,7 @@ const Chat: React.FC = () => {
   }, [showCoach]);
   
   const [inputBeforeMic, setInputBeforeMic] = useState('');
+  const [isOrbOpen, setIsOrbOpen] = useState(false);
   
   const { isListening, supported: sttSupported, toggleListening } = useSpeechToText({
     onResult: (text, isFinal) => {
@@ -84,10 +86,7 @@ const Chat: React.FC = () => {
   });
   
   const handleToggleMic = () => {
-    if (!isListening) {
-      setInputBeforeMic(input);
-    }
-    toggleListening();
+    setIsOrbOpen(true);
   };
 
   useEffect(() => {
@@ -204,6 +203,8 @@ const Chat: React.FC = () => {
               } else if (data.event === 'token') {
                 setLiveAgentStatus(null);
                 setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: m.content + data.content } : m));
+              } else if (data.event === 'clear') {
+                setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: '' } : m));
               } else if (data.event === 'end') {
                 if (data.session_id) {
                     setSessionId(data.session_id);
@@ -291,7 +292,7 @@ const Chat: React.FC = () => {
                 <div key={msg.id} className="flex flex-col w-full gap-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/30 flex items-center justify-center hover-lock">
-                      <img alt="NYRA Logo" className="w-full h-full object-cover rounded-full" src="/logo.webp" />
+                      <img alt="NYRA Logo" className="w-full h-full object-cover rounded-full" src="/nyra_logo.jpg" />
                     </div>
                     <span className="font-display text-sm font-bold gradient-text">NYRA</span>
                   </div>
@@ -500,6 +501,8 @@ const Chat: React.FC = () => {
           </div>
         )}
         </div>
+        
+        <VoiceOrbOverlay isOpen={isOrbOpen} onClose={() => setIsOrbOpen(false)} />
       </ChatLayout>
     );
   };
