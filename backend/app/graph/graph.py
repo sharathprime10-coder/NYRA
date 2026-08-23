@@ -257,7 +257,9 @@ async def writer_node(state: NYRAState, config=None):
     system_msg = SystemMessage(content=content)
 
     try:
-        response = await llm_writer.ainvoke([system_msg] + messages[-10:], config=config)
+        response = await llm_writer.ainvoke(
+            [system_msg] + messages[-10:], config=config
+        )
         return {"draft": response.content, "sender": "writer"}
     except Exception as e:
         logging.error(f"Writer LLM failed: {e}")

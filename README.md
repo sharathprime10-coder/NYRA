@@ -39,7 +39,9 @@ flowchart TD
         EpChat["/api/chat — send message, history"]
     end
     
-    AuthVerif --> Endpoints
+    AuthVerif --> EpAuth
+    AuthVerif --> EpDocs
+    AuthVerif --> EpChat
 
     subgraph Storage["💾 Persistent Storage"]
         direction LR
@@ -103,7 +105,10 @@ flowchart TD
     RAG --> Chroma
     MCP -. reads .-> Disk
     
-    LangGraph --> LLM
+    Supervisor --> Groq
+    Researcher --> Groq
+    Writer --> Groq
+    Critic --> Groq
 ```
 
 ## Features
