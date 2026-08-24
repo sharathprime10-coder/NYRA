@@ -88,9 +88,9 @@ def rag_tool(query: str, config: RunnableConfig) -> dict:
             db.close()
 
     if document_id:
-        filters = {"$and": [{"user_id": int(user_id)}, {"document_id": document_id}]}
+        filters = {"$and": [{"user_id": str(user_id)}, {"document_id": str(document_id)}]}
     else:
-        filters = {"user_id": int(user_id)}
+        filters = {"user_id": str(user_id)}
 
     # ChromaDB crashes if where clauses contain None values
     clean_filters = {}

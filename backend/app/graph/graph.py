@@ -92,7 +92,9 @@ def supervisor_node(state: NYRAState, config=None):
         if isinstance(msg, HumanMessage):
             last_user_msg = msg.content.lower()
             break
-    if any(
+    has_doc_filter = config and config.get("configurable", {}).get("filters", {}).get("document_id") is not None
+    
+    if has_doc_filter or any(
         kw in last_user_msg
         for kw in [
             "summarize",

@@ -21,6 +21,23 @@
     min-height: 44px;
     min-width: 44px;
   }
+
+  /* Custom Scrollbar with Purple Gradient */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(17, 19, 29, 0.2); 
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #8083ff, #571bc1);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #c0c1ff, #8083ff);
+  }
 }
 
 @layer components {
