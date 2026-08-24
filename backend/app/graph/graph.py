@@ -244,10 +244,26 @@ async def writer_node(state: NYRAState, config=None):
         if isinstance(msg, ToolMessage):
             try:
                 data = json.loads(msg.content)
-                if "confidence" in data and data["confidence"] == "Low":
-                    low_confidence = True
 
-                if "context" in data:
+                # rag_tool returns {"context": {... dict from query_knowledge_base ...}}
+                if "context" in data and isinstance(data["context"], dict):
+                    context_dict = data["context"]
+                    if (
+                        "confidence" in context_dict
+                        and context_dict["confidence"] == "Low"
+                    ):
+                        low_confidence = True
+
+                    sources = context_dict.get("sources", [])
+                    if sources:
+                        context_str = "\n\n".join(
+                            [s.get("content", "") for s in sources]
+                        )
+                        tool_context += f"\n--- RETRIEVED DATA ---\n{context_str}\n"
+                    else:
+                        tool_context += f"\n--- RETRIEVED DATA ---\nNo sources found.\n"
+                elif "context" in data and isinstance(data["context"], list):
+                    # Fallback for other tools that might return a list of strings
                     context_str = "\n\n".join(data["context"])
                     tool_context += f"\n--- RETRIEVED DATA ---\n{context_str}\n"
                 else:
