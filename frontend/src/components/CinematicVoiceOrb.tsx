@@ -236,17 +236,113 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
       const savedVoiceName = localStorage.getItem('nyra_voice') || 'Default';
       const languageHint = `\n\n[System Instruction: You are responding via Text-to-Speech. The user's voice setting is '${savedVoiceName}'. You MUST respond in the appropriate language for this voice. Keep your answer concise and conversational.]`;
 
-      const res = await api.post('/api/chat/', {
-        message: text + languageHint,
-        session_id: sessionIdRef.current
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/chat/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          message: text + languageHint,
+          session_id: sessionIdRef.current,
+          stream: true
+        })
       });
-      
-      setOrbState('speaking');
-      speak(res.data.answer, () => {
-        onMessageTranscribed(text, res.data.answer, res.data.session_id);
-        setTranscript('');
-        setOrbState('listening'); 
-      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error("No reader");
+
+      // Sentence-by-sentence TTS: buffer tokens, speak complete sentences
+      let fullAnswer = '';
+      let sentenceBuffer = '';
+      let newSessionId: string | undefined;
+      const sentenceQueue: string[] = [];
+      let isSpeakingQueue = false;
+
+      const speakNextInQueue = () => {
+        if (sentenceQueue.length === 0) {
+          isSpeakingQueue = false;
+          return;
+        }
+        isSpeakingQueue = true;
+        const sentence = sentenceQueue.shift()!;
+        speak(sentence, speakNextInQueue);
+      };
+
+      const enqueueSentence = (sentence: string) => {
+        const trimmed = sentence.trim();
+        if (!trimmed) return;
+        sentenceQueue.push(trimmed);
+        if (!isSpeakingQueue) {
+          setOrbState('speaking');
+          speakNextInQueue();
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.event === 'token') {
+                fullAnswer += data.content;
+                sentenceBuffer += data.content;
+
+                // Check if buffer contains a complete sentence
+                const sentenceEnd = sentenceBuffer.search(/[.!?]\s|[.!?]$/);
+                if (sentenceEnd !== -1) {
+                  const endIdx = sentenceEnd + 1;
+                  const completeSentence = sentenceBuffer.slice(0, endIdx);
+                  sentenceBuffer = sentenceBuffer.slice(endIdx);
+                  enqueueSentence(completeSentence);
+                }
+              } else if (data.event === 'end') {
+                if (data.session_id) newSessionId = data.session_id;
+              }
+            } catch (e) {
+              // skip malformed SSE lines
+            }
+          }
+        }
+      }
+
+      // Flush remaining buffer
+      if (sentenceBuffer.trim()) {
+        enqueueSentence(sentenceBuffer);
+        sentenceBuffer = '';
+      }
+
+      // Wait for all speech to finish, then report back
+      const waitForSpeechDone = () => {
+        return new Promise<void>((resolve) => {
+          const check = () => {
+            if (!isSpeakingQueue && sentenceQueue.length === 0) {
+              resolve();
+            } else {
+              setTimeout(check, 200);
+            }
+          };
+          check();
+        });
+      };
+
+      await waitForSpeechDone();
+
+      onMessageTranscribed(text, fullAnswer, newSessionId ? parseInt(newSessionId, 10) : undefined);
+      setTranscript('');
+      setOrbState('listening');
+
     } catch (err) {
       console.error(err);
       speak("I'm sorry, I encountered an error.", () => {

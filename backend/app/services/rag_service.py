@@ -1,5 +1,7 @@
 import os
 import time
+import logging
+import shutil
 
 from google import genai
 from langchain_chroma import Chroma
@@ -29,7 +31,7 @@ from app.core.config import settings
 os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
 
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2")
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
+llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0.2)
 
 # Initialize Chroma Vector Store locally
 vector_store = Chroma(
@@ -64,7 +66,7 @@ def _extract_text_with_gemini(file_path: str) -> str:
 
         # Extract text
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-3.6-flash",
             contents=[
                 f,
                 "Extract all text from this document accurately. Preserve structure.",
@@ -157,7 +159,7 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int):
 
 def query_knowledge_base(query: str, filters: dict = None):
     """Retrieves relevant chunks from ChromaDB using Hybrid Search (Dense + BM25) and FlashRank reranking."""
-
+    start_time = time.time()
     # We'll use this to keep track of the final distance/score for confidence
     top_score = 0.0
     final_docs = []
@@ -242,6 +244,9 @@ def query_knowledge_base(query: str, filters: dict = None):
                     is_shared = True
         except Exception as e:
             print(f"Shared FAQ retrieval failed: {e}")
+
+    duration = (time.time() - start_time) * 1000
+    logging.info("retrieval_completed", extra={"event": "retrieval_completed", "duration_ms": round(duration, 1), "chunks_returned": len(final_docs)})
 
     return {
         "answer": "",

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -58,6 +59,7 @@ class CriticReview(BaseModel):
 
 def supervisor_node(state: NYRAState, config=None):
     """Orchestrator that routes to the appropriate specialist agent."""
+    start = time.time()
     thinking_level = (
         config.get("configurable", {}).get("thinking_level", "medium")
         if config
@@ -120,11 +122,14 @@ def supervisor_node(state: NYRAState, config=None):
         next_agent = "writer"  # Fallback to writer if routing fails
 
     # We don't add the supervisor's thought to the message history, just route it
+    duration = (time.time() - start) * 1000
+    logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "supervisor", "duration_ms": round(duration, 1)})
     return {"sender": "supervisor", "next_node": next_agent}
 
 
 async def researcher_node(state: NYRAState, config=None):
     """Gathers facts and uses tools to build up a knowledge context."""
+    start = time.time()
     messages = state["messages"]
     system_msg = SystemMessage(
         content=(
@@ -148,6 +153,8 @@ async def researcher_node(state: NYRAState, config=None):
         response = await llm_with_tools.ainvoke(
             [system_msg] + messages[-5:], config=config
         )
+        duration = (time.time() - start) * 1000
+        logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "researcher", "duration_ms": round(duration, 1)})
         return {"messages": [response], "sender": "researcher", "error_retries": 0}
     except Exception as e:
         logging.error(f"Researcher LLM failed: {e}")
@@ -182,6 +189,7 @@ async def researcher_node(state: NYRAState, config=None):
 
 async def writer_node(state: NYRAState, config=None):
     """Drafts the final response to the user."""
+    start = time.time()
     thinking_level = (
         config.get("configurable", {}).get("thinking_level", "medium")
         if config
@@ -257,10 +265,26 @@ async def writer_node(state: NYRAState, config=None):
     system_msg = SystemMessage(content=content)
 
     try:
-        response = await llm_writer.ainvoke(
-            [system_msg] + messages[-10:], config=config
-        )
-        return {"draft": response.content, "sender": "writer"}
+        llm_config = {**config} if config else {}
+        llm_config["tags"] = llm_config.get("tags", []) + ["writer"]
+
+        draft = ""
+        async for chunk in llm_writer.astream(
+            [system_msg] + messages[-10:], config=llm_config
+        ):
+            content = chunk.content
+            if isinstance(content, str):
+                draft += content
+            elif isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and "text" in item:
+                        draft += item["text"]
+                    elif isinstance(item, str):
+                        draft += item
+
+        duration = (time.time() - start) * 1000
+        logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "writer", "duration_ms": round(duration, 1)})
+        return {"draft": draft, "sender": "writer"}
     except Exception as e:
         logging.error(f"Writer LLM failed: {e}")
         error_text = f"Error generating response: {str(e)}"
@@ -273,6 +297,7 @@ async def writer_node(state: NYRAState, config=None):
 
 def critic_node(state: NYRAState, config=None):
     """Evaluates the writer's draft for quality and accuracy."""
+    start = time.time()
     draft = state.get("draft", "")
     messages = state["messages"]
     attempts = state.get("critic_attempts", 0) or 0
@@ -291,6 +316,8 @@ def critic_node(state: NYRAState, config=None):
 
         if review.passed:
             # If passed, we finally append the draft to the message history as an AIMessage
+            duration = (time.time() - start) * 1000
+            logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "critic", "duration_ms": round(duration, 1)})
             return {
                 "messages": [AIMessage(content=draft)],
                 "sender": "critic",
@@ -317,19 +344,31 @@ def critic_node(state: NYRAState, config=None):
         }
 
 
-# Create a lazy loader class that inherits from ToolNode but defers tool resolution
-class LazyToolNode:
-    def __init__(self, get_tools_func):
-        self.get_tools_func = get_tools_func
-        self._node = None
-
-    def __call__(self, state, config=None):
-        if not self._node:
-            self._node = ToolNode(self.get_tools_func())
-        return self._node(state, config=config)
-
-
-tool_node = LazyToolNode(get_all_tools)
+async def tool_node(state: NYRAState, config=None):
+    from langchain_core.messages import ToolMessage
+    user_id = None
+    if config and "configurable" in config:
+        user_id = config["configurable"].get("user_id")
+        
+    tools = await get_all_tools(user_id=user_id)
+    tools_by_name = {tool.name: tool for tool in tools}
+    
+    last_message = state["messages"][-1]
+    results = []
+    
+    for tool_call in getattr(last_message, "tool_calls", []):
+        tool = tools_by_name.get(tool_call["name"])
+        if tool:
+            try:
+                # Some tools might be sync, some async, use invoke which handles both
+                result = tool.invoke(tool_call["args"], config=config)
+                results.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
+            except Exception as e:
+                results.append(ToolMessage(content=f"Error: {str(e)}", tool_call_id=tool_call["id"]))
+        else:
+            results.append(ToolMessage(content=f"Tool {tool_call['name']} not found", tool_call_id=tool_call["id"]))
+            
+    return {"messages": results}
 
 
 def route_from_supervisor(state: NYRAState):

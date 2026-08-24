@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     CEREBRAS_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
     NVIDIA_API_KEY: str = ""
+    REDIS_URL: str = "redis://127.0.0.1:6379/0"
 
     class Config:
         env_file = env_file

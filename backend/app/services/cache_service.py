@@ -1,28 +1,43 @@
 import hashlib
 import json
+import logging
 from typing import Any
 
 import redis
 
-# Initialize Redis connection
-# Fallback to a memory dict if redis fails to connect (graceful degradation)
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Redis client with graceful memory-cache fallback
+# ---------------------------------------------------------------------------
+
 _redis_client = None
-_memory_cache = {}
+_memory_cache: dict[str, str] = {}
+_warned = False  # one-shot warning flag
 
 
 def get_redis_client():
-    global _redis_client
+    global _redis_client, _warned
     if _redis_client is None:
+        redis_url = getattr(settings, "REDIS_URL", None) or "redis://127.0.0.1:6379/0"
         try:
-            # Assuming standard docker-compose redis port
-            _redis_client = redis.Redis(
-                host="localhost", port=6379, decode_responses=True
+            _redis_client = redis.Redis.from_url(
+                redis_url,
+                decode_responses=True,
+                socket_connect_timeout=2,  # don't block startup
+                socket_timeout=2,
             )
             _redis_client.ping()
-        except Exception as e:
-            print(
-                f"Warning: Could not connect to Redis, falling back to memory cache. Error: {e}"
-            )
+            logger.info("redis_connected", extra={"url": redis_url})
+        except Exception:
+            if not _warned:
+                logger.warning(
+                    "redis_unavailable_using_memory_cache",
+                    extra={"url": redis_url},
+                )
+                _warned = True
             _redis_client = "memory"
     return _redis_client
 
@@ -52,14 +67,17 @@ def get_cached_response(
         try:
             cached_data = client.get(key)
         except Exception as e:
-            print(f"Redis get error: {e}")
+            logger.debug(f"Redis get error: {e}")
             return None
 
     if cached_data:
         try:
+            logger.info("cache_hit", extra={"key_prefix": key[:40]})
             return json.loads(cached_data)
-        except:
+        except Exception:
             return None
+
+    logger.debug("cache_miss", extra={"key_prefix": key[:40]})
     return None
 
 
@@ -68,7 +86,7 @@ def set_cached_response(
     user_id: int,
     document_id: str | None,
     response_data: dict[str, Any],
-    ttl_seconds: int = 3600,
+    ttl_seconds: int = 900,  # 15 minutes (was 1 hour — shorter is safer)
 ):
     """Cache the response with a time-to-live."""
     key = _generate_cache_key(query, user_id, document_id)
@@ -82,4 +100,4 @@ def set_cached_response(
         try:
             client.setex(name=key, time=ttl_seconds, value=serialized_data)
         except Exception as e:
-            print(f"Redis set error: {e}")
+            logger.debug(f"Redis set error: {e}")

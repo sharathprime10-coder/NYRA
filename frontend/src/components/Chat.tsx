@@ -11,7 +11,7 @@ import rehypeKatex from 'rehype-katex';
 import { useParams } from 'react-router-dom';
 import { useSpeechToText } from '../hooks/useSpeechToText';
 import { PromptCoach } from './PromptCoach';
-import { VoiceOrbOverlay } from './voice-orb/VoiceOrbOverlay';
+
 
 interface Source {
   document_id?: number;
@@ -502,7 +502,20 @@ const Chat: React.FC = () => {
         )}
         </div>
         
-        <VoiceOrbOverlay isOpen={isOrbOpen} onClose={() => setIsOrbOpen(false)} />
+        {isOrbOpen && (
+          <CinematicVoiceOrb 
+            onClose={() => setIsOrbOpen(false)}
+            sessionId={sessionId ? parseInt(sessionId, 10) : undefined}
+            onMessageTranscribed={(msg, response, newSessionId) => {
+              const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: msg };
+              const aiMsg: ChatMessage = { id: (Date.now() + 1).toString(), role: 'ai', content: response };
+              setMessages(prev => [...prev, userMsg, aiMsg]);
+              if (newSessionId && !sessionId) {
+                setSessionId(newSessionId.toString());
+              }
+            }}
+          />
+        )}
       </ChatLayout>
     );
   };

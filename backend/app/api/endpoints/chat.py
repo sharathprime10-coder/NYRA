@@ -23,6 +23,7 @@ class ChatMessageRequest(BaseModel):
     thinking_level: str = "low"
     force_refresh: bool = False
     tone: Literal["default", "sassy"] = "default"
+    stream: bool = True
 
 
 class Source(BaseModel):
@@ -89,14 +90,17 @@ async def send_message(
         db.refresh(new_session)
         session_id = str(new_session.id)
 
+    # Extract clean message without hidden system instructions
+    clean_msg = chat_request.message.split("[System Instruction:")[0].strip()
+
     thinking_level = chat_request.thinking_level
     if thinking_level == "low":
-        msg_lower = chat_request.message.lower()
+        msg_lower = clean_msg.lower()
         needs_deep = any(
             kw in msg_lower
             for kw in ["calculate", "compare", "according to", "explain", "analyze"]
         )
-        if len(chat_request.message) > 100 or needs_deep:
+        if len(clean_msg) > 100 or needs_deep:
             thinking_level = "medium"
 
     doc_id = chat_request.filters.get("document_id") if chat_request.filters else None
@@ -129,11 +133,126 @@ async def send_message(
         db.add(db_ai_msg)
         db.commit()
 
+        if not chat_request.stream:
+            return ChatMessageResponse(
+                answer=cached["answer"],
+                sources=cached["sources"] if cached.get("sources") else [],
+                confidence=cached.get("confidence", "High"),
+                session_id=str(session_id)
+            )
+
         async def cached_stream():
             yield f"data: {json.dumps({'event': 'token', 'content': cached['answer']})}\n\n"
             yield f"data: {json.dumps({'event': 'end', 'session_id': session_id})}\n\n"
 
         return StreamingResponse(cached_stream(), media_type="text/event-stream")
+
+    # ── SIMPLE-QUERY FAST-PATH ──────────────────────────────────────────
+    # If thinking_level is "low", no document filter, and the message is
+    # short, skip the entire multi-agent graph and answer with a single
+    # fast Gemini call. This cuts 3-4 LLM calls down to 1.
+    is_simple = (
+        thinking_level == "low"
+        and not doc_id
+        and len(clean_msg) < 200
+    )
+
+    if is_simple:
+        import logging as _log
+
+        from app.core.llm_factory import get_fast_llm
+
+        fast_llm = get_fast_llm()
+
+        # Build a minimal prompt with recent history for context
+        fast_messages = []
+        for msg in history[-4:]:
+            if msg.role == "user":
+                fast_messages.append(HumanMessage(content=msg.content))
+            elif msg.role == "ai":
+                fast_messages.append(AIMessage(content=msg.content))
+        fast_messages.append(
+            SystemMessage(
+                content=(
+                    "You are NYRA, a helpful and accurate AI assistant. "
+                    "Answer the user's question concisely and directly. "
+                    "Use markdown formatting."
+                )
+            )
+        )
+        fast_messages.append(HumanMessage(content=chat_request.message))
+
+        # Save user message
+        db_user_msg = ChatMessage(
+            session_id=session_id, role="user", content=chat_request.message
+        )
+        db.add(db_user_msg)
+        db.commit()
+
+        _log.getLogger(__name__).info(
+            "fast_path_activated",
+            extra={"session_id": session_id, "msg_len": len(chat_request.message)},
+        )
+
+        if not chat_request.stream:
+            # JSON response mode (voice orb)
+            try:
+                response = await fast_llm.ainvoke(fast_messages)
+                answer = response.content
+            except Exception:
+                _log.getLogger(__name__).error(
+                    "fast_path_failed", extra={"session_id": session_id}, exc_info=True
+                )
+                raise HTTPException(status_code=500, detail="An error occurred.")
+
+            db_ai_msg = ChatMessage(
+                session_id=session_id, role="ai", content=answer, sources=None
+            )
+            db.add(db_ai_msg)
+            db.commit()
+            set_cached_response(
+                chat_request.message, str(current_user.id), doc_id,
+                {"answer": answer, "sources": [], "confidence": "High"},
+            )
+            return ChatMessageResponse(
+                answer=answer, sources=[], confidence="High",
+                session_id=str(session_id),
+            )
+
+        # SSE streaming mode (chat UI)
+        async def fast_stream():
+            full_answer = ""
+            try:
+                yield f"data: {json.dumps({'event': 'status', 'node': 'writer'})}\n\n"
+                async for chunk in fast_llm.astream(fast_messages):
+                    token = chunk.content
+                    if isinstance(token, str) and token:
+                        full_answer += token
+                        yield f"data: {json.dumps({'event': 'token', 'content': token})}\n\n"
+
+                # Save to DB + cache
+                def _save():
+                    db_ai = ChatMessage(
+                        session_id=session_id, role="ai", content=full_answer, sources=None
+                    )
+                    db.add(db_ai)
+                    db.commit()
+                    set_cached_response(
+                        chat_request.message, str(current_user.id), doc_id,
+                        {"answer": full_answer, "sources": [], "confidence": "High"},
+                    )
+
+                await asyncio.to_thread(_save)
+                yield f"data: {json.dumps({'event': 'end', 'session_id': session_id})}\n\n"
+            except Exception:
+                _log.getLogger(__name__).error(
+                    "fast_path_stream_failed", extra={"session_id": session_id}, exc_info=True
+                )
+                yield f"data: {json.dumps({'event': 'error', 'content': 'An error occurred.'})}\n\n"
+
+        return StreamingResponse(fast_stream(), media_type="text/event-stream")
+
+    # ── END FAST-PATH ─────────────────────────────────────────────────
 
     input_messages = []
 
@@ -200,6 +319,50 @@ async def send_message(
         "callbacks": [TokenTrackerCallback(str(session_id), "llm_invocation")],
     }
 
+    if not chat_request.stream:
+        final_answer = ""
+        try:
+            async for event in nyra_graph.astream_events(
+                {"messages": input_messages, "user_id": str(current_user.id)},
+                config=config,
+                version="v2",
+            ):
+                kind = event["event"]
+                if kind == "on_chat_model_stream" and "writer" in event.get("tags", []):
+                    chunk = event["data"]["chunk"].content
+                    if isinstance(chunk, str) and chunk:
+                        final_answer += chunk
+        except Exception:
+            from app.core.logging_config import setup_logging
+            logger = setup_logging()
+            logger.error("chat_pipeline_failed", extra={"session_id": session_id}, exc_info=True)
+            raise HTTPException(status_code=500, detail="An error occurred during generation.")
+
+        def save_final_sync():
+            db_ai_msg = ChatMessage(
+                session_id=session_id, role="ai", content=final_answer, sources=None
+            )
+            db.add(db_ai_msg)
+            db.commit()
+            set_cached_response(
+                chat_request.message,
+                str(current_user.id),
+                doc_id,
+                {
+                    "answer": final_answer,
+                    "sources": [],
+                    "confidence": "High",
+                }
+            )
+
+        await asyncio.to_thread(save_final_sync)
+        return ChatMessageResponse(
+            answer=final_answer,
+            sources=[],
+            confidence="High",
+            session_id=str(session_id)
+        )
+
     async def event_generator():
         final_answer = ""
         try:
@@ -228,9 +391,19 @@ async def send_message(
                     "tags", []
                 ):
                     chunk = event["data"]["chunk"].content
+                    chunk_text = ""
                     if isinstance(chunk, str) and chunk:
-                        final_answer += chunk
-                        yield f"data: {json.dumps({'event': 'token', 'content': chunk})}\n\n"
+                        chunk_text = chunk
+                    elif isinstance(chunk, list):
+                        for item in chunk:
+                            if isinstance(item, dict) and "text" in item:
+                                chunk_text += item["text"]
+                            elif isinstance(item, str):
+                                chunk_text += item
+                    
+                    if chunk_text:
+                        final_answer += chunk_text
+                        yield f"data: {json.dumps({'event': 'token', 'content': chunk_text})}\n\n"
 
             # Save final message
             def save_final():
@@ -244,9 +417,11 @@ async def send_message(
                     chat_request.message,
                     str(current_user.id),
                     doc_id,
-                    final_answer,
-                    [],
-                    "High",
+                    {
+                        "answer": final_answer,
+                        "sources": [],
+                        "confidence": "High",
+                    }
                 )
 
             await asyncio.to_thread(save_final)
