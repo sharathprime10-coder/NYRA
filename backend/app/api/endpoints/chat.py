@@ -306,12 +306,14 @@ async def send_message(
             .first()
         )
         if doc:
-            sys_msg = SystemMessage(
-                content=f"Context: The user has attached a document named '{doc.filename}' for this specific query. If the user refers to 'this document', 'the PDF', or similar, they are referring to '{doc.filename}'. You MUST use the rag_tool with query='{chat_request.message}' to retrieve and read the document content before answering."
+            doc_context = f"Context: The user has attached a document named '{doc.filename}' for this specific query. If the user refers to 'this document', 'the PDF', or similar, they are referring to '{doc.filename}'. You MUST use the rag_tool with query='{chat_request.message}' to retrieve and read the document content before answering.\n\n"
+            input_messages.append(
+                HumanMessage(content=doc_context + chat_request.message)
             )
-            input_messages.append(sys_msg)
-
-    input_messages.append(HumanMessage(content=chat_request.message))
+        else:
+            input_messages.append(HumanMessage(content=chat_request.message))
+    else:
+        input_messages.append(HumanMessage(content=chat_request.message))
 
     db_user_msg = ChatMessage(
         session_id=session_id, role="user", content=chat_request.message
