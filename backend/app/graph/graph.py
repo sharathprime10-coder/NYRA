@@ -80,7 +80,11 @@ def supervisor_node(state: NYRAState, config=None):
             kw in msg.content.lower()
             for kw in ["document", "pdf", "rag_tool", "attached"]
         ):
-            return {"sender": "supervisor", "next_node": "researcher", "routing_path": "deep"}
+            return {
+                "sender": "supervisor",
+                "next_node": "researcher",
+                "routing_path": "deep",
+            }
 
     # Also check user message for document/summarize keywords
     last_user_msg = ""
@@ -101,7 +105,11 @@ def supervisor_node(state: NYRAState, config=None):
             "according to",
         ]
     ):
-        return {"sender": "supervisor", "next_node": "researcher", "routing_path": "deep"}
+        return {
+            "sender": "supervisor",
+            "next_node": "researcher",
+            "routing_path": "deep",
+        }
 
     system_msg = SystemMessage(
         content=(
@@ -135,7 +143,11 @@ def supervisor_node(state: NYRAState, config=None):
             "routing_path": routing_path,
         },
     )
-    return {"sender": "supervisor", "next_node": next_agent, "routing_path": routing_path}
+    return {
+        "sender": "supervisor",
+        "next_node": next_agent,
+        "routing_path": routing_path,
+    }
 
 
 async def researcher_node(state: NYRAState, config=None):
