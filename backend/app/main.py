@@ -20,6 +20,8 @@ from app.db.database import Base, engine
 from app.tools.mcp_client import cleanup_mcp, initialize_mcp
 
 logger = setup_logging()
+import logging
+logging.getLogger("langchain_google_genai._function_utils").setLevel(logging.ERROR)
 
 
 def _rate_limit_exceeded_handler(
@@ -75,7 +77,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Define allowed origins
-origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+origins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"]
 
 frontend_url = os.environ.get("FRONTEND_URL")
 if frontend_url:
