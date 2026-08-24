@@ -53,7 +53,7 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
   
   const recognitionRef = useRef<any>(null);
   const orbStateRef = useRef<OrbState>('init');
-  const sessionIdRef = useRef<number | undefined>(sessionId);
+  const sessionIdRef = useRef<string | undefined>(sessionId);
   const silenceTimerRef = useRef<any>(null);
   const accumulatedTranscriptRef = useRef<string>('');
 
