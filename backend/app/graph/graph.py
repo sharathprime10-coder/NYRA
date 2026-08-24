@@ -367,7 +367,9 @@ def critic_node(state: NYRAState, config=None):
 
     evaluator_llm = llm_critic.with_structured_output(CriticReview)
     try:
-        review = evaluator_llm.invoke([system_msg] + messages[-10:], config=config)
+        # Append a HumanMessage at the end to prevent Gemini "model prefilling" error
+        eval_prompt = HumanMessage(content="Based on the conversation above, please evaluate the draft as instructed.")
+        review = evaluator_llm.invoke([system_msg] + messages[-10:] + [eval_prompt], config=config)
 
         if review.passed:
             # If passed, we finally append the draft to the message history as an AIMessage
