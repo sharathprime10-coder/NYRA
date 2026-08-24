@@ -128,9 +128,7 @@ def supervisor_node(state: NYRAState, config=None):
     # Use structured output for routing
     router_llm_structured = llm_router.with_structured_output(Router)
     try:
-        decision = router_llm_structured.invoke(
-            [system_msg] + messages[-5:], config=config
-        )
+        decision = router_llm_structured.invoke([system_msg] + messages, config=config)
         routing_path = decision.path
     except Exception as e:
         logging.error(f"Supervisor LLM failed: {e}")
@@ -178,10 +176,9 @@ async def researcher_node(state: NYRAState, config=None):
     llm_with_tools = get_frontier_llm(tools=tools)
 
     try:
-        # Limit history to last 5 messages to save tokens
-        response = await llm_with_tools.ainvoke(
-            [system_msg] + messages[-5:], config=config
-        )
+        # Pass the full history. Slicing with [-5:] can split a ToolMessage from its AIMessage
+        # and cause a strict API validation error in Gemini.
+        response = await llm_with_tools.ainvoke([system_msg] + messages, config=config)
         duration = (time.time() - start) * 1000
         logging.info(
             "agent_node_completed",
@@ -320,9 +317,32 @@ async def writer_node(state: NYRAState, config=None):
         llm_config = {**config} if config else {}
         llm_config["tags"] = llm_config.get("tags", []) + ["writer"]
 
+        # Append a HumanMessage to prevent Gemini's "model prefilling" error
+        writer_prompt = HumanMessage(
+            content="Based on the context and instructions provided, please write the final response."
+        )
+
+        # Filter out tool interactions from the conversation history to prevent Gemini validation errors
+        # (Gemini strictly requires alternating roles and matching tool calls/responses)
+        clean_history = []
+        for m in messages:
+            if isinstance(m, ToolMessage):
+                continue
+            elif isinstance(m, AIMessage):
+                # If it's an AIMessage with tool calls, we strip the tool calls so it's just text (if any)
+                if getattr(m, "tool_calls", None) or getattr(
+                    m, "invalid_tool_calls", None
+                ):
+                    if m.content:
+                        clean_history.append(AIMessage(content=m.content))
+                    continue
+                clean_history.append(m)
+            else:
+                clean_history.append(m)
+
         draft = ""
         async for chunk in llm_writer.astream(
-            [system_msg] + messages[-10:], config=llm_config
+            [system_msg] + clean_history + [writer_prompt], config=llm_config
         ):
             content = chunk.content
             if isinstance(content, str):
@@ -393,8 +413,10 @@ def critic_node(state: NYRAState, config=None):
         eval_prompt = HumanMessage(
             content="Based on the conversation above, please evaluate the draft as instructed."
         )
+
+        # Pass full history to prevent Gemini API strict validation errors caused by slicing
         review = evaluator_llm.invoke(
-            [system_msg] + messages[-10:] + [eval_prompt], config=config
+            [system_msg] + messages + [eval_prompt], config=config
         )
 
         if review.passed:
