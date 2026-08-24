@@ -6,8 +6,8 @@ import api from '../api/client';
 
 interface CinematicVoiceOrbProps {
   onClose: () => void;
-  onMessageTranscribed: (msg: string, response: string, newSessionId?: number) => void;
-  sessionId?: number;
+  onMessageTranscribed: (msg: string, response: string, newSessionId?: string) => void;
+  sessionId?: string;
 }
 
 type OrbState = 'init' | 'greeting' | 'listening' | 'processing' | 'speaking';
@@ -339,7 +339,7 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
 
       await waitForSpeechDone();
 
-      onMessageTranscribed(text, fullAnswer, newSessionId ? parseInt(newSessionId, 10) : undefined);
+      onMessageTranscribed(text, fullAnswer, newSessionId);
       setTranscript('');
       setOrbState('listening');
 

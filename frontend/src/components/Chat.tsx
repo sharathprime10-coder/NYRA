@@ -335,7 +335,7 @@ const Chat: React.FC = () => {
               </div>
             )}
             
-            <div className="h-40 w-full shrink-0" ref={messagesEndRef} />
+            <div className="h-56 w-full shrink-0" ref={messagesEndRef} />
           </div>
         </div>
         
@@ -505,7 +505,7 @@ const Chat: React.FC = () => {
         {isOrbOpen && (
           <CinematicVoiceOrb 
             onClose={() => setIsOrbOpen(false)}
-            sessionId={sessionId ? parseInt(sessionId, 10) : undefined}
+            sessionId={sessionId}
             onMessageTranscribed={(msg, response, newSessionId) => {
               const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: msg };
               const aiMsg: ChatMessage = { id: (Date.now() + 1).toString(), role: 'ai', content: response };
