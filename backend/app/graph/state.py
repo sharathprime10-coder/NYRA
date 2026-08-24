@@ -22,3 +22,4 @@ class NYRAState(TypedDict):
     error_retries: int | None
     critic_attempts: int | None
     tool_invoked: bool | None
+    routing_path: str | None

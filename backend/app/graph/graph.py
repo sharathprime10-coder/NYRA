@@ -33,10 +33,11 @@ llm_critic = get_critic_llm()  # Critic (deep reasoning to catch hallucinations)
 
 # Data Models for Routing
 class Router(BaseModel):
-    next_agent: Literal["researcher", "writer"] = Field(
+    path: Literal["simple", "deep"] = Field(
         description=(
-            "The next agent to route to. Choose 'researcher' if factual data/tools are needed. "
-            "Choose 'writer' if drafting a response based on conversation context or casual chat."
+            "The path to route to. Choose 'simple' if it is a general knowledge question, "
+            "conversational, or answerable without the user's uploaded documents or tools. "
+            "Choose 'deep' if it requires retrieval from uploaded documents or tool use."
         )
     )
 
@@ -68,7 +69,7 @@ def supervisor_node(state: NYRAState, config=None):
 
     # If thinking level is low, bypass reasoning and immediately draft
     if thinking_level == "low":
-        return {"sender": "supervisor", "next_node": "writer"}
+        return {"sender": "supervisor", "next_node": "writer", "routing_path": "simple"}
 
     messages = state["messages"]
 
@@ -79,7 +80,7 @@ def supervisor_node(state: NYRAState, config=None):
             kw in msg.content.lower()
             for kw in ["document", "pdf", "rag_tool", "attached"]
         ):
-            return {"sender": "supervisor", "next_node": "researcher"}
+            return {"sender": "supervisor", "next_node": "researcher", "routing_path": "deep"}
 
     # Also check user message for document/summarize keywords
     last_user_msg = ""
@@ -100,13 +101,13 @@ def supervisor_node(state: NYRAState, config=None):
             "according to",
         ]
     ):
-        return {"sender": "supervisor", "next_node": "researcher"}
+        return {"sender": "supervisor", "next_node": "researcher", "routing_path": "deep"}
 
     system_msg = SystemMessage(
         content=(
             "You are the NYRA Orchestrator. Analyze the conversation. "
-            "If the user asks a factual question, needs calculations, or document retrieval, route to 'researcher'. "
-            "If the user asks a conversational question or asks to draft text based on history, route to 'writer'."
+            "If the user asks a factual question, needs calculations, or document retrieval, route to 'deep'. "
+            "If the user asks a conversational question or asks to draft text based on history, route to 'simple'."
         )
     )
 
@@ -116,10 +117,12 @@ def supervisor_node(state: NYRAState, config=None):
         decision = router_llm_structured.invoke(
             [system_msg] + messages[-5:], config=config
         )
-        next_agent = decision.next_agent
+        routing_path = decision.path
     except Exception as e:
         logging.error(f"Supervisor LLM failed: {e}")
-        next_agent = "writer"  # Fallback to writer if routing fails
+        routing_path = "simple"  # Fallback to simple writer path if routing fails
+
+    next_agent = "writer" if routing_path == "simple" else "researcher"
 
     # We don't add the supervisor's thought to the message history, just route it
     duration = (time.time() - start) * 1000
@@ -129,9 +132,10 @@ def supervisor_node(state: NYRAState, config=None):
             "event": "agent_node_completed",
             "node": "supervisor",
             "duration_ms": round(duration, 1),
+            "routing_path": routing_path,
         },
     )
-    return {"sender": "supervisor", "next_node": next_agent}
+    return {"sender": "supervisor", "next_node": next_agent, "routing_path": routing_path}
 
 
 async def researcher_node(state: NYRAState, config=None):
@@ -323,6 +327,24 @@ def critic_node(state: NYRAState, config=None):
     messages = state["messages"]
     attempts = state.get("critic_attempts", 0) or 0
 
+    if attempts >= 1:
+        logging.warning("Critic loop cap reached. Approving draft to prevent latency.")
+        duration = (time.time() - start) * 1000
+        logging.info(
+            "agent_node_completed",
+            extra={
+                "event": "agent_node_completed",
+                "node": "critic",
+                "duration_ms": round(duration, 1),
+                "cap_reached": True,
+            },
+        )
+        return {
+            "messages": [AIMessage(content=draft)],
+            "sender": "critic",
+            "next_node": "FINISH",
+        }
+
     system_msg = SystemMessage(
         content=(
             f"You are the NYRA Critic. Evaluate the following draft response:\n\n{draft}\n\n"
@@ -437,17 +459,9 @@ def route_from_writer(state: NYRAState, config=None):
         if config
         else "medium"
     )
-    attempts = state.get("critic_attempts", 0) or 0
-    tool_invoked = state.get("tool_invoked", False)
 
     if thinking_level == "low":
         return "FINISH"
-    elif thinking_level == "medium" and not tool_invoked:
-        return "FINISH"  # Skip critic for medium conversational turns without factual tool data
-    elif thinking_level == "medium" and attempts >= 1:
-        return "FINISH"  # Only 1 critic loop for medium
-    elif thinking_level == "high" and attempts >= 3:
-        return "FINISH"  # Max 3 critic loops for high
 
     return "critic"
 
