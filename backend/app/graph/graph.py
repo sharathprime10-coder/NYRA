@@ -92,8 +92,12 @@ def supervisor_node(state: NYRAState, config=None):
         if isinstance(msg, HumanMessage):
             last_user_msg = msg.content.lower()
             break
-    has_doc_filter = config and config.get("configurable", {}).get("filters", {}).get("document_id") is not None
-    
+    has_doc_filter = (
+        config
+        and config.get("configurable", {}).get("filters", {}).get("document_id")
+        is not None
+    )
+
     if has_doc_filter or any(
         kw in last_user_msg
         for kw in [
@@ -370,8 +374,12 @@ def critic_node(state: NYRAState, config=None):
     evaluator_llm = llm_critic.with_structured_output(CriticReview)
     try:
         # Append a HumanMessage at the end to prevent Gemini "model prefilling" error
-        eval_prompt = HumanMessage(content="Based on the conversation above, please evaluate the draft as instructed.")
-        review = evaluator_llm.invoke([system_msg] + messages[-10:] + [eval_prompt], config=config)
+        eval_prompt = HumanMessage(
+            content="Based on the conversation above, please evaluate the draft as instructed."
+        )
+        review = evaluator_llm.invoke(
+            [system_msg] + messages[-10:] + [eval_prompt], config=config
+        )
 
         if review.passed:
             # If passed, we finally append the draft to the message history as an AIMessage

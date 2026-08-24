@@ -88,7 +88,9 @@ def rag_tool(query: str, config: RunnableConfig) -> dict:
             db.close()
 
     if document_id:
-        filters = {"$and": [{"user_id": str(user_id)}, {"document_id": str(document_id)}]}
+        filters = {
+            "$and": [{"user_id": str(user_id)}, {"document_id": str(document_id)}]
+        }
     else:
         filters = {"user_id": str(user_id)}
 

@@ -104,7 +104,7 @@ async def send_message(
             thinking_level = "medium"
 
     doc_id = chat_request.filters.get("document_id") if chat_request.filters else None
-    
+
     # Chroma metadata stores document_id as a string, but the frontend sends it as a number.
     # We must cast it to a string here so the RAG filter matches.
     if chat_request.filters and doc_id is not None:
