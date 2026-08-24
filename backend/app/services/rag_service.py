@@ -246,7 +246,14 @@ def query_knowledge_base(query: str, filters: dict = None):
             print(f"Shared FAQ retrieval failed: {e}")
 
     duration = (time.time() - start_time) * 1000
-    logging.info("retrieval_completed", extra={"event": "retrieval_completed", "duration_ms": round(duration, 1), "chunks_returned": len(final_docs)})
+    logging.info(
+        "retrieval_completed",
+        extra={
+            "event": "retrieval_completed",
+            "duration_ms": round(duration, 1),
+            "chunks_returned": len(final_docs),
+        },
+    )
 
     return {
         "answer": "",

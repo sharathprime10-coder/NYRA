@@ -138,7 +138,7 @@ async def send_message(
                 answer=cached["answer"],
                 sources=cached["sources"] if cached.get("sources") else [],
                 confidence=cached.get("confidence", "High"),
-                session_id=str(session_id)
+                session_id=str(session_id),
             )
 
         async def cached_stream():
@@ -151,11 +151,7 @@ async def send_message(
     # If thinking_level is "low", no document filter, and the message is
     # short, skip the entire multi-agent graph and answer with a single
     # fast Gemini call. This cuts 3-4 LLM calls down to 1.
-    is_simple = (
-        thinking_level == "low"
-        and not doc_id
-        and len(clean_msg) < 200
-    )
+    is_simple = thinking_level == "low" and not doc_id and len(clean_msg) < 200
 
     if is_simple:
         import logging as _log
@@ -211,11 +207,15 @@ async def send_message(
             db.add(db_ai_msg)
             db.commit()
             set_cached_response(
-                chat_request.message, str(current_user.id), doc_id,
+                chat_request.message,
+                str(current_user.id),
+                doc_id,
                 {"answer": answer, "sources": [], "confidence": "High"},
             )
             return ChatMessageResponse(
-                answer=answer, sources=[], confidence="High",
+                answer=answer,
+                sources=[],
+                confidence="High",
                 session_id=str(session_id),
             )
 
@@ -233,12 +233,17 @@ async def send_message(
                 # Save to DB + cache
                 def _save():
                     db_ai = ChatMessage(
-                        session_id=session_id, role="ai", content=full_answer, sources=None
+                        session_id=session_id,
+                        role="ai",
+                        content=full_answer,
+                        sources=None,
                     )
                     db.add(db_ai)
                     db.commit()
                     set_cached_response(
-                        chat_request.message, str(current_user.id), doc_id,
+                        chat_request.message,
+                        str(current_user.id),
+                        doc_id,
                         {"answer": full_answer, "sources": [], "confidence": "High"},
                     )
 
@@ -246,7 +251,9 @@ async def send_message(
                 yield f"data: {json.dumps({'event': 'end', 'session_id': session_id})}\n\n"
             except Exception:
                 _log.getLogger(__name__).error(
-                    "fast_path_stream_failed", extra={"session_id": session_id}, exc_info=True
+                    "fast_path_stream_failed",
+                    extra={"session_id": session_id},
+                    exc_info=True,
                 )
                 yield f"data: {json.dumps({'event': 'error', 'content': 'An error occurred.'})}\n\n"
 
@@ -334,9 +341,14 @@ async def send_message(
                         final_answer += chunk
         except Exception:
             from app.core.logging_config import setup_logging
+
             logger = setup_logging()
-            logger.error("chat_pipeline_failed", extra={"session_id": session_id}, exc_info=True)
-            raise HTTPException(status_code=500, detail="An error occurred during generation.")
+            logger.error(
+                "chat_pipeline_failed", extra={"session_id": session_id}, exc_info=True
+            )
+            raise HTTPException(
+                status_code=500, detail="An error occurred during generation."
+            )
 
         def save_final_sync():
             db_ai_msg = ChatMessage(
@@ -352,7 +364,7 @@ async def send_message(
                     "answer": final_answer,
                     "sources": [],
                     "confidence": "High",
-                }
+                },
             )
 
         await asyncio.to_thread(save_final_sync)
@@ -360,7 +372,7 @@ async def send_message(
             answer=final_answer,
             sources=[],
             confidence="High",
-            session_id=str(session_id)
+            session_id=str(session_id),
         )
 
     async def event_generator():
@@ -400,7 +412,7 @@ async def send_message(
                                 chunk_text += item["text"]
                             elif isinstance(item, str):
                                 chunk_text += item
-                    
+
                     if chunk_text:
                         final_answer += chunk_text
                         yield f"data: {json.dumps({'event': 'token', 'content': chunk_text})}\n\n"
@@ -421,7 +433,7 @@ async def send_message(
                         "answer": final_answer,
                         "sources": [],
                         "confidence": "High",
-                    }
+                    },
                 )
 
             await asyncio.to_thread(save_final)

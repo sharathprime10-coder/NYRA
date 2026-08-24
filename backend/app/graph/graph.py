@@ -123,7 +123,14 @@ def supervisor_node(state: NYRAState, config=None):
 
     # We don't add the supervisor's thought to the message history, just route it
     duration = (time.time() - start) * 1000
-    logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "supervisor", "duration_ms": round(duration, 1)})
+    logging.info(
+        "agent_node_completed",
+        extra={
+            "event": "agent_node_completed",
+            "node": "supervisor",
+            "duration_ms": round(duration, 1),
+        },
+    )
     return {"sender": "supervisor", "next_node": next_agent}
 
 
@@ -154,7 +161,14 @@ async def researcher_node(state: NYRAState, config=None):
             [system_msg] + messages[-5:], config=config
         )
         duration = (time.time() - start) * 1000
-        logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "researcher", "duration_ms": round(duration, 1)})
+        logging.info(
+            "agent_node_completed",
+            extra={
+                "event": "agent_node_completed",
+                "node": "researcher",
+                "duration_ms": round(duration, 1),
+            },
+        )
         return {"messages": [response], "sender": "researcher", "error_retries": 0}
     except Exception as e:
         logging.error(f"Researcher LLM failed: {e}")
@@ -283,7 +297,14 @@ async def writer_node(state: NYRAState, config=None):
                         draft += item
 
         duration = (time.time() - start) * 1000
-        logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "writer", "duration_ms": round(duration, 1)})
+        logging.info(
+            "agent_node_completed",
+            extra={
+                "event": "agent_node_completed",
+                "node": "writer",
+                "duration_ms": round(duration, 1),
+            },
+        )
         return {"draft": draft, "sender": "writer"}
     except Exception as e:
         logging.error(f"Writer LLM failed: {e}")
@@ -317,7 +338,14 @@ def critic_node(state: NYRAState, config=None):
         if review.passed:
             # If passed, we finally append the draft to the message history as an AIMessage
             duration = (time.time() - start) * 1000
-            logging.info("agent_node_completed", extra={"event": "agent_node_completed", "node": "critic", "duration_ms": round(duration, 1)})
+            logging.info(
+                "agent_node_completed",
+                extra={
+                    "event": "agent_node_completed",
+                    "node": "critic",
+                    "duration_ms": round(duration, 1),
+                },
+            )
             return {
                 "messages": [AIMessage(content=draft)],
                 "sender": "critic",
@@ -346,28 +374,40 @@ def critic_node(state: NYRAState, config=None):
 
 async def tool_node(state: NYRAState, config=None):
     from langchain_core.messages import ToolMessage
+
     user_id = None
     if config and "configurable" in config:
         user_id = config["configurable"].get("user_id")
-        
+
     tools = await get_all_tools(user_id=user_id)
     tools_by_name = {tool.name: tool for tool in tools}
-    
+
     last_message = state["messages"][-1]
     results = []
-    
+
     for tool_call in getattr(last_message, "tool_calls", []):
         tool = tools_by_name.get(tool_call["name"])
         if tool:
             try:
                 # Some tools might be sync, some async, use invoke which handles both
                 result = tool.invoke(tool_call["args"], config=config)
-                results.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
+                results.append(
+                    ToolMessage(content=str(result), tool_call_id=tool_call["id"])
+                )
             except Exception as e:
-                results.append(ToolMessage(content=f"Error: {str(e)}", tool_call_id=tool_call["id"]))
+                results.append(
+                    ToolMessage(
+                        content=f"Error: {str(e)}", tool_call_id=tool_call["id"]
+                    )
+                )
         else:
-            results.append(ToolMessage(content=f"Tool {tool_call['name']} not found", tool_call_id=tool_call["id"]))
-            
+            results.append(
+                ToolMessage(
+                    content=f"Tool {tool_call['name']} not found",
+                    tool_call_id=tool_call["id"],
+                )
+            )
+
     return {"messages": results}
 
 

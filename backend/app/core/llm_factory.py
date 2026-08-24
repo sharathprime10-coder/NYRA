@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _TRANSIENT_COOLDOWN_S = 120  # 2 minutes
-_TRANSIENT_THRESHOLD = 3     # failures before tripping
+_TRANSIENT_THRESHOLD = 3  # failures before tripping
 
 
 class ProviderCircuit:
@@ -59,10 +59,16 @@ class ProviderCircuit:
 
         err_str = str(error).lower()
         # Permanent failures — never retry until server restart
-        if any(kw in err_str for kw in [
-            "model_decommissioned", "model_not_found",
-            "does not exist", "not supported", "deprecated",
-        ]):
+        if any(
+            kw in err_str
+            for kw in [
+                "model_decommissioned",
+                "model_not_found",
+                "does not exist",
+                "not supported",
+                "deprecated",
+            ]
+        ):
             self.is_permanent = True
             logger.error(
                 "provider_permanently_disabled",
