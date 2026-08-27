@@ -98,7 +98,14 @@ async def send_message(
         msg_lower = clean_msg.lower()
         needs_deep = any(
             kw in msg_lower
-            for kw in ["calculate", "compare", "according to", "explain", "analyze", "summarize"]
+            for kw in [
+                "calculate",
+                "compare",
+                "according to",
+                "explain",
+                "analyze",
+                "summarize",
+            ]
         )
         if len(clean_msg) > 100 or needs_deep:
             thinking_level = "medium"

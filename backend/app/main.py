@@ -3,7 +3,6 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -21,6 +20,7 @@ from app.tools.mcp_client import cleanup_mcp, initialize_mcp
 
 logger = setup_logging()
 import logging
+
 logging.getLogger("langchain_google_genai._function_utils").setLevel(logging.ERROR)
 
 
@@ -35,14 +35,19 @@ def _rate_limit_exceeded_handler(
 
 
 # Initialize Sentry if DSN is provided
-sentry_dsn = os.environ.get("SENTRY_DSN")
-if sentry_dsn:
-    sentry_sdk.init(
-        dsn=sentry_dsn,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
-    )
-    logger.info("Sentry initialized")
+try:
+    import sentry_sdk
+
+    sentry_dsn = os.environ.get("SENTRY_DSN")
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            traces_sample_rate=1.0,
+            profiles_sample_rate=1.0,
+        )
+        logger.info("Sentry initialized")
+except ImportError:
+    logger.warning("sentry_sdk not installed, skipping Sentry initialization")
 
 
 @asynccontextmanager
@@ -76,12 +81,28 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 
-# Define allowed origins
-origins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"]
+# Define allowed origins — permissive for local development
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
 frontend_url = os.environ.get("FRONTEND_URL")
 if frontend_url:
-    origins.append(frontend_url)
+    # Strip trailing slash for consistent matching
+    origins.append(frontend_url.rstrip("/"))
+    logger.info("CORS: added FRONTEND_URL=%s to allowed origins", frontend_url)
+else:
+    logger.warning(
+        "CORS: FRONTEND_URL not set. Only localhost origins are allowed. "
+        "Set FRONTEND_URL in .env if accessing from a non-localhost origin."
+    )
 
 app.add_middleware(
     CORSMiddleware,
