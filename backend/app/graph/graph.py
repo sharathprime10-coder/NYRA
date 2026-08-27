@@ -158,13 +158,26 @@ async def researcher_node(state: NYRAState, config=None):
     """Gathers facts and uses tools to build up a knowledge context."""
     start = time.time()
     messages = state["messages"]
+
+    # Track research iterations for the hard cap
+    iterations = (state.get("research_iterations") or 0) + 1
+    logging.info(
+        "researcher_iteration",
+        extra={
+            "event": "researcher_iteration",
+            "research_iterations": iterations,
+        },
+    )
+
     system_msg = SystemMessage(
         content=(
             "You are the NYRA Researcher. Your job is to gather accurate, detailed information to answer the user's query.\n"
             "Use the provided tools if needed. If no tools are needed, provide a detailed summary of your findings based on your knowledge.\n"
             "Do NOT write a conversational response to the user. Just gather the data.\n"
             "CRITICAL INSTRUCTION: You MUST use native JSON tool calling capabilities provided by the API. "
-            "Your tool calls must be valid JSON."
+            "Your tool calls must be valid JSON.\n"
+            "IMPORTANT: If a tool returns an error saying 'Do NOT retry your search', do NOT call that tool again. "
+            "Instead, report the failure and move on."
         )
     )
 
@@ -186,9 +199,15 @@ async def researcher_node(state: NYRAState, config=None):
                 "event": "agent_node_completed",
                 "node": "researcher",
                 "duration_ms": round(duration, 1),
+                "research_iterations": iterations,
             },
         )
-        return {"messages": [response], "sender": "researcher", "error_retries": 0}
+        return {
+            "messages": [response],
+            "sender": "researcher",
+            "error_retries": 0,
+            "research_iterations": iterations,
+        }
     except Exception as e:
         logging.error(f"Researcher LLM failed: {e}")
 
@@ -206,6 +225,7 @@ async def researcher_node(state: NYRAState, config=None):
                 "messages": [error_msg],
                 "sender": "researcher",
                 "error_retries": retries + 1,
+                "research_iterations": iterations,
                 "next_node": "self_correct",
             }
         else:
@@ -216,6 +236,7 @@ async def researcher_node(state: NYRAState, config=None):
                     )
                 ],
                 "sender": "researcher",
+                "research_iterations": iterations,
                 "next_node": "writer",
             }
 
@@ -232,6 +253,59 @@ async def writer_node(state: NYRAState, config=None):
         config.get("configurable", {}).get("tone", "default") if config else "default"
     )
     messages = state["messages"]
+    retrieval_failed = state.get("retrieval_failed") or False
+
+    # Detect retrieval failure from tool messages ("Do NOT retry" error from rag_tool)
+    # This catches the case where rag_tool returned an explicit no-results error
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            try:
+                content = msg.content
+                if isinstance(content, str) and "Do NOT retry" in content:
+                    retrieval_failed = True
+                    break
+                data = json.loads(content) if isinstance(content, str) else content
+                if isinstance(data, dict) and "Do NOT retry" in str(
+                    data.get("error", "")
+                ):
+                    retrieval_failed = True
+                    break
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    # Also check research iteration cap
+    iterations = state.get("research_iterations") or 0
+    if iterations >= 2:
+        # Check if we actually got useful content despite hitting the cap
+        has_content = False
+        for msg in messages:
+            if isinstance(msg, ToolMessage):
+                try:
+                    data = (
+                        json.loads(msg.content)
+                        if isinstance(msg.content, str)
+                        else msg.content
+                    )
+                    if (
+                        isinstance(data, dict)
+                        and data.get("context")
+                        and len(data["context"]) > 0
+                    ):
+                        has_content = True
+                        break
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        if not has_content:
+            retrieval_failed = True
+
+    if retrieval_failed:
+        logging.warning(
+            "writer_retrieval_failed",
+            extra={
+                "event": "writer_retrieval_failed",
+                "research_iterations": iterations,
+            },
+        )
 
     # Extract tool results to inject directly into the writer's context
     tool_context = ""
@@ -258,7 +332,7 @@ async def writer_node(state: NYRAState, config=None):
                         )
                         tool_context += f"\n--- RETRIEVED DATA ---\n{context_str}\n"
                     else:
-                        tool_context += f"\n--- RETRIEVED DATA ---\nNo sources found.\n"
+                        tool_context += "\n--- RETRIEVED DATA ---\nNo sources found.\n"
                 elif "context" in data and isinstance(data["context"], list):
                     # Fallback for other tools that might return a list of strings
                     context_str = "\n\n".join(data["context"])
@@ -293,7 +367,15 @@ async def writer_node(state: NYRAState, config=None):
     content += "You are the NYRA Writer. Your job is to draft a helpful, professional, and accurate response to the user. "
     content += "Use the conversation history and the RETRIEVED DATA below to write your response. Output your response clearly in markdown.\n"
 
-    if low_confidence:
+    if retrieval_failed:
+        content += (
+            "CRITICAL: The document retrieval FAILED — no relevant content was found in the user's uploaded documents. "
+            "You MUST tell the user that you could not find relevant information in their document(s). "
+            "Do NOT attempt to answer from general knowledge, do NOT guess, and do NOT make up content. "
+            "Simply state that the information was not found in the uploaded document(s) and suggest they try rephrasing "
+            "their question or verifying the document was uploaded correctly. Be polite but firm.\n"
+        )
+    elif low_confidence:
         content += (
             "CRITICAL: The retrieved data DOES NOT contain sufficient information to answer the user's question. "
             "You MUST explicitly state that the documents do not have enough information, rather than guessing or answering "
@@ -506,8 +588,44 @@ def route_from_researcher(state: NYRAState):
     elif next_node == "writer":
         return "writer"
 
+    # Hard cap: stop after 2 research iterations to prevent infinite retry loops
+    iterations = state.get("research_iterations") or 0
+    if iterations >= 2:
+        logging.warning(
+            "research_cap_reached",
+            extra={
+                "event": "research_cap_reached",
+                "research_iterations": iterations,
+            },
+        )
+        # Route to writer with retrieval_failed flag
+        return "writer"
+
     messages = state["messages"]
     last_message = messages[-1]
+
+    # Check if the last tool result was a "do not retry" error from rag_tool
+    # If so, skip further tool calls and go straight to writer with failure flag
+    if isinstance(last_message, ToolMessage):
+        try:
+            data = (
+                json.loads(last_message.content)
+                if isinstance(last_message.content, str)
+                else last_message.content
+            )
+            if isinstance(data, dict) and "Do NOT retry" in str(data.get("error", "")):
+                logging.info(
+                    "rag_no_retry_detected",
+                    extra={"event": "rag_no_retry_detected"},
+                )
+                return "writer"
+        except (json.JSONDecodeError, TypeError):
+            if (
+                isinstance(last_message.content, str)
+                and "Do NOT retry" in last_message.content
+            ):
+                return "writer"
+
     # If the researcher invoked a tool, go to tools
     if getattr(last_message, "tool_calls", None):
         return "tools"
