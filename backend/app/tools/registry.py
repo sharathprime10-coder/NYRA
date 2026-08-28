@@ -126,7 +126,9 @@ def rag_tool(query: str, config: RunnableConfig) -> dict:
                 "user_id_value": str(uid_val),
                 "user_id_type": type(uid_val).__name__,
                 "document_id_value": str(did_val) if did_val is not None else "None",
-                "document_id_type": type(did_val).__name__ if did_val is not None else "None",
+                "document_id_type": (
+                    type(did_val).__name__ if did_val is not None else "None"
+                ),
                 "chunks_found": count,
             },
         )

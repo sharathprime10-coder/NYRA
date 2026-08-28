@@ -19,6 +19,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # Initialize FlashRank reranker globally
 try:
     from flashrank import Ranker
+
     FlashrankRerank.model_rebuild()
     flashrank_compressor = FlashrankRerank(top_n=4)
 except Exception as e:

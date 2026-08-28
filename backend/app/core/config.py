@@ -50,4 +50,6 @@ if not settings.GEMINI_API_KEY:
 if not settings.GROQ_API_KEY:
     _startup_logger.info("GROQ_API_KEY not set — Groq fallback is disabled.")
 if not settings.OPENROUTER_API_KEY:
-    _startup_logger.info("OPENROUTER_API_KEY not set — OpenRouter fallback is disabled.")
+    _startup_logger.info(
+        "OPENROUTER_API_KEY not set — OpenRouter fallback is disabled."
+    )
