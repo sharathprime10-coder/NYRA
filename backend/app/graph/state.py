@@ -23,3 +23,7 @@ class NYRAState(TypedDict):
     critic_attempts: int | None
     tool_invoked: bool | None
     routing_path: str | None
+
+    # RAG Retrieval Safeguards
+    research_iterations: int | None
+    retrieval_failed: bool | None

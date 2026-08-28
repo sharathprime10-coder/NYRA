@@ -37,3 +37,17 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Startup validation — loud warnings for missing critical keys
+import logging as _log
+
+_startup_logger = _log.getLogger("nyra.startup")
+if not settings.GEMINI_API_KEY:
+    _startup_logger.critical(
+        "⚠️  GEMINI_API_KEY is not set! All LLM calls will fail. "
+        "Set it in backend/.env or as an environment variable."
+    )
+if not settings.GROQ_API_KEY:
+    _startup_logger.info("GROQ_API_KEY not set — Groq fallback is disabled.")
+if not settings.OPENROUTER_API_KEY:
+    _startup_logger.info("OPENROUTER_API_KEY not set — OpenRouter fallback is disabled.")

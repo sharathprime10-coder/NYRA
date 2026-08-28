@@ -58,6 +58,8 @@ def rag_tool(query: str, config: RunnableConfig) -> dict:
     Use this tool when the user asks a factual question that you don't know the answer to,
     or when they ask about their uploaded documents.
     """
+    import logging
+
     from app.db.database import SessionLocal
     from app.db.models.document import Document
     from app.services.rag_service import query_knowledge_base
@@ -87,28 +89,78 @@ def rag_tool(query: str, config: RunnableConfig) -> dict:
         finally:
             db.close()
 
-    if document_id:
-        filters = {
-            "$and": [{"user_id": str(user_id)}, {"document_id": str(document_id)}]
-        }
-    else:
-        filters = {"user_id": str(user_id)}
+    # --- Build filters and query with dual-type fallback ---
+    # ChromaDB metadata is strictly typed. Legacy documents may have document_id/user_id
+    # stored as int instead of str. We try str first, then fall back to int if no results.
 
-    # ChromaDB crashes if where clauses contain None values
-    clean_filters = {}
-    if "$and" in filters:
-        valid_conditions = [
-            cond for cond in filters["$and"] if list(cond.values())[0] is not None
-        ]
-        if len(valid_conditions) > 1:
-            clean_filters["$and"] = valid_conditions
-        elif len(valid_conditions) == 1:
-            clean_filters = valid_conditions[0]
-    else:
-        clean_filters = {k: v for k, v in filters.items() if v is not None}
+    def _build_filters(uid, did):
+        """Build ChromaDB filter dict from uid and did values."""
+        if did is not None:
+            return {"$and": [{"user_id": uid}, {"document_id": did}]}
+        else:
+            return {"user_id": uid}
+
+    def _clean_filters(filters):
+        """Remove None values that would crash ChromaDB."""
+        clean = {}
+        if "$and" in filters:
+            valid = [c for c in filters["$and"] if list(c.values())[0] is not None]
+            if len(valid) > 1:
+                clean["$and"] = valid
+            elif len(valid) == 1:
+                clean = valid[0]
+        else:
+            clean = {k: v for k, v in filters.items() if v is not None}
+        return clean
+
+    def _try_query(uid_val, did_val, label):
+        """Run a query with given uid/did values and return (result, sources_count)."""
+        filters = _clean_filters(_build_filters(uid_val, did_val))
+        res = query_knowledge_base(query, filters=filters)
+        count = len(res.get("sources", []))
+        logging.info(
+            "rag_filter_attempt",
+            extra={
+                "event": "rag_filter_attempt",
+                "filter_label": label,
+                "user_id_value": str(uid_val),
+                "user_id_type": type(uid_val).__name__,
+                "document_id_value": str(did_val) if did_val is not None else "None",
+                "document_id_type": type(did_val).__name__ if did_val is not None else "None",
+                "chunks_found": count,
+            },
+        )
+        return res, count
 
     try:
-        res = query_knowledge_base(query, filters=clean_filters)
+        # Attempt 1: str types (the expected/correct format)
+        str_uid = str(user_id)
+        str_did = str(document_id) if document_id is not None else None
+        res, count = _try_query(str_uid, str_did, "str_primary")
+
+        # Attempt 2: int fallback for legacy docs (both user_id and document_id)
+        if count == 0:
+            try:
+                int_uid = int(user_id)
+                int_did = int(document_id) if document_id is not None else None
+                res, count = _try_query(int_uid, int_did, "int_fallback")
+            except (ValueError, TypeError):
+                # user_id or document_id can't be cast to int — skip fallback
+                pass
+
+        # If still zero results after both attempts, return explicit non-retryable error
+        if count == 0:
+            logging.warning(
+                "rag_no_results",
+                extra={
+                    "event": "rag_no_results",
+                    "user_id": str(user_id),
+                    "document_id": str(document_id) if document_id else "None",
+                },
+            )
+            return {
+                "error": "No relevant documents found in the database. Do NOT retry your search."
+            }
 
         # Resolve document filenames from DB instead of showing raw file paths
         db = SessionLocal()

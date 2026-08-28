@@ -217,8 +217,16 @@ const Chat: React.FC = () => {
           }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Chat error", err);
+      // Detect CORS or network errors (fetch throws TypeError on CORS block)
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      if (err instanceof TypeError && err.message?.includes('fetch')) {
+        errorMessage = "⚠️ Could not connect to the server. This may be a CORS or network issue. Please ensure the backend is running and accessible.";
+      } else if (err?.message?.includes('HTTP error')) {
+        errorMessage = `⚠️ Server returned an error: ${err.message}. Check the backend logs for details.`;
+      }
+      setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: errorMessage } : m));
     } finally {
       setLoading(false);
       setLiveAgentStatus(null);

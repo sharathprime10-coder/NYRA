@@ -79,17 +79,30 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
         recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = true;
         
-        // Match recognition language to the selected TTS voice
-        const savedVoiceName = localStorage.getItem('nyra_voice');
-        let targetLang = 'en-US';
-        if (synth && savedVoiceName) {
+        // Helper: resolve language from saved voice (handles async voice loading)
+        const resolveRecognitionLang = () => {
+          const savedVoiceName = localStorage.getItem('nyra_voice');
+          if (synth && savedVoiceName) {
             const voices = synth.getVoices();
             const foundVoice = voices.find((v: any) => v.name === savedVoiceName);
-            if (foundVoice) {
-                targetLang = foundVoice.lang;
+            if (foundVoice) return foundVoice.lang;
+          }
+          return 'en-US';
+        };
+
+        recognitionRef.current.lang = resolveRecognitionLang();
+
+        // Web Speech API loads voices asynchronously — update language when ready
+        if (synth) {
+          const onVoicesChanged = () => {
+            if (recognitionRef.current) {
+              recognitionRef.current.lang = resolveRecognitionLang();
             }
+          };
+          synth.addEventListener('voiceschanged', onVoicesChanged);
+          // Force initial load attempt
+          synth.getVoices();
         }
-        recognitionRef.current.lang = targetLang;
 
         recognitionRef.current.onresult = (event: any) => {
           if (orbStateRef.current !== 'listening') return;
@@ -142,16 +155,13 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
         };
       }
 
-      // Force load voices
-      if (synth) synth.getVoices();
-
-      // Initial greeting sequence
+      // Initial greeting sequence — slight delay to let voices load
       timer = setTimeout(() => {
         setOrbState('greeting');
         speak("Hello. How can I help you?", () => {
           setOrbState('listening');
         });
-      }, 300);
+      }, 500);
 
     } catch (e) {
       console.error("Initialization error in VoiceOrb:", e);
