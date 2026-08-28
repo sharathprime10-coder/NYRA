@@ -1,7 +1,10 @@
 import os
 import time
 import uuid
+import warnings
 from contextlib import asynccontextmanager
+
+warnings.filterwarnings("ignore", category=UserWarning, module="onnxruntime")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -99,7 +102,7 @@ if frontend_url:
     origins.append(frontend_url.rstrip("/"))
     logger.info("CORS: added FRONTEND_URL=%s to allowed origins", frontend_url)
 else:
-    logger.warning(
+    logger.info(
         "CORS: FRONTEND_URL not set. Only localhost origins are allowed. "
         "Set FRONTEND_URL in .env if accessing from a non-localhost origin."
     )
