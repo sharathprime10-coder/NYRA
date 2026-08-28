@@ -2,16 +2,15 @@
 NYRA LLM Factory — Production-grade provider management.
 
 Architecture:
-  - Groq is PRIMARY (Llama 3.3 70B / 3.1 8B).
-  - Gemini 2.5 Flash is the FIRST FALLBACK.
-  - OpenRouter (NVIDIA Nemotron) is the SECOND FALLBACK.
+  - Gemini is PRIMARY (always available, fastest for this app).
+  - Groq and OpenRouter are OPTIONAL fallbacks with circuit breakers.
   - Each provider is wrapped in a ProviderCircuit that tracks failures
     and skips dead providers automatically.
 
-Model IDs:
-  Groq:        llama-3.1-8b-instant (router/critic/fast), llama-3.3-70b-versatile (researcher/robust)
-  Gemini:      gemini-2.5-flash
-  OpenRouter:  nvidia/llama-3.1-nemotron-70b-instruct
+Model IDs (August 2026):
+  Gemini:      gemini-3.5-flash-lite (router/critic), gemini-3.6-flash (researcher/writer)
+  Groq:        openai/gpt-oss-20b (writer), openai/gpt-oss-120b (researcher)
+  OpenRouter:  meta-llama/llama-4-maverick
 """
 
 import logging
@@ -151,22 +150,12 @@ def _build_openrouter(
     )
 
 
-def _build_cascade(models_list, tools=None):
-    """Safely build a fallback chain from a list of optionally-None providers."""
-    valid = [m for m in models_list if m is not None]
-    if not valid:
-        raise ValueError("No LLM providers available (check API keys in .env).")
-
-    primary = valid[0]
-    fallbacks = valid[1:]
-
-    if tools:
-        primary = primary.bind_tools(tools)
-        fallbacks = [fb.bind_tools(tools) for fb in fallbacks]
-
-    if fallbacks:
+def _with_optional_fallbacks(primary, fallbacks):
+    """Attach non-None fallbacks to the primary LLM."""
+    valid = [fb for fb in fallbacks if fb is not None]
+    if valid:
         return primary.with_fallbacks(
-            fallbacks=fallbacks, exceptions_to_handle=(Exception,)
+            fallbacks=valid, exceptions_to_handle=(Exception,)
         )
     return primary
 
@@ -262,63 +251,59 @@ class InstrumentedLLM:
 def get_router_llm():
     """
     Ultra-fast LLM for the Supervisor routing decision.
-    Primary: Groq Llama 3.1 8B
-    Fallback: Gemini 2.5 Flash
+    Uses cheap flash-lite with tight timeout — no fallbacks (speed > resilience).
     """
-    groq = _build_groq(model="llama-3.1-8b-instant", timeout=10)
-    gemini = _build_gemini(model="gemini-2.5-flash", timeout=10)
-    return _build_cascade([groq, gemini])
+    return _build_gemini(model="gemini-3.5-flash-lite", timeout=10)
 
 
 def get_fast_llm():
     """Ultra-fast LLM for low-latency tasks (simple query fast-path)."""
-    groq = _build_groq(model="llama-3.1-8b-instant", timeout=10)
-    gemini = _build_gemini(model="gemini-2.5-flash", timeout=10)
-    return _build_cascade([groq, gemini])
+    return _build_gemini(model="gemini-3.5-flash-lite", timeout=10)
 
 
 def get_frontier_llm(tools=None):
     """
     Most powerful LLM for the Researcher (complex agentic / tool-use tasks).
-    Primary: Groq Llama 3.3 70B
-    Fallback 1: Gemini 2.5 Flash
-    Fallback 2: OpenRouter NVIDIA Nemotron 70B
+    Primary: Gemini 3.6 Flash
+    Fallback 1: Groq gpt-oss-120b
+    Fallback 2: OpenRouter Llama 4 Maverick
     """
-    groq = _build_groq(model="llama-3.3-70b-versatile", timeout=25)
-    gemini = _build_gemini(model="gemini-2.5-flash", timeout=30)
-    nemotron = _build_openrouter(
-        model="nvidia/llama-3.1-nemotron-70b-instruct", timeout=25
-    )
-    return _build_cascade([groq, gemini, nemotron], tools=tools)
+    primary = _build_gemini(model="gemini-3.6-flash", timeout=30)
+    groq = _build_groq(model="openai/gpt-oss-120b", timeout=25)
+    or_llm = _build_openrouter(timeout=25)
+
+    if tools:
+        primary = primary.bind_tools(tools)
+        if groq:
+            groq = groq.bind_tools(tools)
+        if or_llm:
+            or_llm = or_llm.bind_tools(tools)
+
+    return _with_optional_fallbacks(primary, [groq, or_llm])
 
 
 def get_writer_llm():
     """
     LLM for the Writer agent (expressive, fast drafting).
-    Primary: Groq Llama 3.1 8B
-    Fallback 1: Gemini 2.5 Flash
+    Primary: Gemini 3.6 Flash
+    Fallback: Groq gpt-oss-20b
     """
-    groq = _build_groq(model="llama-3.1-8b-instant", timeout=25)
-    gemini = _build_gemini(model="gemini-2.5-flash", timeout=30)
-    return _build_cascade([groq, gemini])
+    primary = _build_gemini(model="gemini-3.6-flash", timeout=30)
+    groq = _build_groq(model="openai/gpt-oss-20b", timeout=25)
+    return _with_optional_fallbacks(primary, [groq])
 
 
 def get_robust_llm():
     """General-purpose LLM with full fallback chain."""
-    groq = _build_groq(model="llama-3.3-70b-versatile", timeout=25)
-    gemini = _build_gemini(model="gemini-2.5-flash", timeout=30)
-    nemotron = _build_openrouter(
-        model="nvidia/llama-3.1-nemotron-70b-instruct", timeout=25
-    )
-    return _build_cascade([groq, gemini, nemotron])
+    primary = _build_gemini(model="gemini-3.6-flash", timeout=30)
+    groq = _build_groq(timeout=25)
+    or_llm = _build_openrouter(timeout=25)
+    return _with_optional_fallbacks(primary, [groq, or_llm])
 
 
 def get_critic_llm():
     """
     LLM for the Critic (hallucination checker).
-    Primary: Groq Llama 3.1 8B
-    Fallback: Gemini 2.5 Flash
+    Uses cheap flash-lite — no fallbacks (speed > resilience).
     """
-    groq = _build_groq(model="llama-3.1-8b-instant", timeout=10)
-    gemini = _build_gemini(model="gemini-2.5-flash", timeout=10)
-    return _build_cascade([groq, gemini])
+    return _build_gemini(model="gemini-3.5-flash-lite", timeout=10)
