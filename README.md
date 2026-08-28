@@ -84,12 +84,12 @@ flowchart TD
 
     subgraph LLM["☁️ LLM Provider Cascade — with fallback"]
         direction LR
-        Groq["Groq — Llama 3.3 70B / 3.18B"]
-        GeminiLLM["Google Gemini 3.6 Flash"]
-        Nvidia["NVIDIA Nemotron — optional"]
+        GeminiLLM["Google Gemini — 3.6 Flash / 3.5 Flash-lite"]
+        Groq["Groq — gpt-oss-120b / 20b (optional)"]
+        OpenRouter["OpenRouter — llama-4-maverick (optional)"]
         
-        Groq -. fallback .-> GeminiLLM
-        GeminiLLM -. fallback .-> Nvidia
+        GeminiLLM -. fallback .-> Groq
+        Groq -. fallback .-> OpenRouter
     end
 
     %% Cross-layer connections
@@ -105,10 +105,10 @@ flowchart TD
     RAG --> Chroma
     MCP -. reads .-> Disk
     
-    Supervisor --> Groq
-    Researcher --> Groq
-    Writer --> Groq
-    Critic --> Groq
+    Supervisor --> GeminiLLM
+    Researcher --> GeminiLLM
+    Writer --> GeminiLLM
+    Critic --> GeminiLLM
 ```
 
 ## Features
