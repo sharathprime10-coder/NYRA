@@ -84,7 +84,7 @@ flowchart TD
 
     subgraph LLM["☁️ LLM Provider Cascade — with fallback"]
         direction LR
-        GeminiLLM["Google Gemini — 3.6 Flash / 3.5 Flash-lite"]
+        GeminiLLM["Google Gemini — 3.7 Flash"]
         Groq["Groq — gpt-oss-120b / 20b (optional)"]
         OpenRouter["OpenRouter — llama-4-maverick (optional)"]
         

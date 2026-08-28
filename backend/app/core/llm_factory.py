@@ -8,7 +8,7 @@ Architecture:
     and skips dead providers automatically.
 
 Model IDs (August 2026):
-  Gemini:      gemini-3.5-flash-lite (router/critic), gemini-3.6-flash (researcher/writer)
+  Gemini:      gemini-3.7-flash
   Groq:        openai/gpt-oss-20b (writer), openai/gpt-oss-120b (researcher)
   OpenRouter:  meta-llama/llama-4-maverick
 """
@@ -102,7 +102,7 @@ def _get_circuit(name: str) -> ProviderCircuit:
 # ---------------------------------------------------------------------------
 
 
-def _build_gemini(model: str = "gemini-3.6-flash", timeout: int = 10, **kwargs):
+def _build_gemini(model: str = "gemini-3.7-flash", timeout: int = 10, **kwargs):
     """Create a Gemini LLM instance."""
     return ChatGoogleGenerativeAI(
         model=model,
@@ -251,24 +251,24 @@ class InstrumentedLLM:
 def get_router_llm():
     """
     Ultra-fast LLM for the Supervisor routing decision.
-    Uses cheap flash-lite with tight timeout — no fallbacks (speed > resilience).
+    Uses fast flash model with tight timeout — no fallbacks (speed > resilience).
     """
-    return _build_gemini(model="gemini-3.5-flash-lite", timeout=10)
+    return _build_gemini(model="gemini-3.7-flash", timeout=10)
 
 
 def get_fast_llm():
     """Ultra-fast LLM for low-latency tasks (simple query fast-path)."""
-    return _build_gemini(model="gemini-3.5-flash-lite", timeout=10)
+    return _build_gemini(model="gemini-3.7-flash", timeout=10)
 
 
 def get_frontier_llm(tools=None):
     """
     Most powerful LLM for the Researcher (complex agentic / tool-use tasks).
-    Primary: Gemini 3.6 Flash
+    Primary: Gemini 3.7 Flash
     Fallback 1: Groq gpt-oss-120b
     Fallback 2: OpenRouter Llama 4 Maverick
     """
-    primary = _build_gemini(model="gemini-3.6-flash", timeout=30)
+    primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(model="openai/gpt-oss-120b", timeout=25)
     or_llm = _build_openrouter(timeout=25)
 
@@ -285,17 +285,17 @@ def get_frontier_llm(tools=None):
 def get_writer_llm():
     """
     LLM for the Writer agent (expressive, fast drafting).
-    Primary: Gemini 3.6 Flash
+    Primary: Gemini 3.7 Flash
     Fallback: Groq gpt-oss-20b
     """
-    primary = _build_gemini(model="gemini-3.6-flash", timeout=30)
+    primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(model="openai/gpt-oss-20b", timeout=25)
     return _with_optional_fallbacks(primary, [groq])
 
 
 def get_robust_llm():
     """General-purpose LLM with full fallback chain."""
-    primary = _build_gemini(model="gemini-3.6-flash", timeout=30)
+    primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(timeout=25)
     or_llm = _build_openrouter(timeout=25)
     return _with_optional_fallbacks(primary, [groq, or_llm])
@@ -304,6 +304,6 @@ def get_robust_llm():
 def get_critic_llm():
     """
     LLM for the Critic (hallucination checker).
-    Uses cheap flash-lite — no fallbacks (speed > resilience).
+    Uses fast flash model — no fallbacks (speed > resilience).
     """
-    return _build_gemini(model="gemini-3.5-flash-lite", timeout=10)
+    return _build_gemini(model="gemini-3.7-flash", timeout=10)
