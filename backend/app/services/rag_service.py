@@ -18,6 +18,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Initialize FlashRank reranker globally
 try:
+    from flashrank import Ranker
+    FlashrankRerank.model_rebuild()
     flashrank_compressor = FlashrankRerank(top_n=4)
 except Exception as e:
     print(f"Warning: Failed to initialize FlashRank: {e}")
@@ -96,7 +98,7 @@ def _transcribe_audio_with_groq(file_path: str) -> str:
     return transcription.text
 
 
-def process_and_store_document(file_path: str, document_id: str, user_id: int):
+def process_and_store_document(file_path: str, document_id: str, user_id: int | str):
     """Loads a file, chunks it, and stores embeddings in ChromaDB."""
     chunks = []
     text_splitter = RecursiveCharacterTextSplitter(
@@ -144,16 +146,31 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int):
             print(f"Gemini OCR fallback failed: {e}")
 
     # Add metadata and filter empty chunks
+    # CRITICAL: Cast document_id and user_id to str() to ensure ChromaDB
+    # metadata type consistency. The rag_tool filter uses str() comparisons.
     valid_chunks = []
     for i, chunk in enumerate(chunks):
         if chunk.page_content.strip():
-            chunk.metadata["document_id"] = document_id
-            chunk.metadata["user_id"] = user_id
+            chunk.metadata["document_id"] = str(document_id)
+            chunk.metadata["user_id"] = str(user_id)
             chunk.metadata["chunk_index"] = i
             valid_chunks.append(chunk)
 
     if valid_chunks:
         vector_store.add_documents(valid_chunks)
+        # Log the exact metadata types written — proof for debugging & testing
+        sample_meta = valid_chunks[0].metadata
+        logging.info(
+            "chroma_chunks_written",
+            extra={
+                "event": "chroma_chunks_written",
+                "document_id": sample_meta["document_id"],
+                "document_id_type": type(sample_meta["document_id"]).__name__,
+                "user_id": sample_meta["user_id"],
+                "user_id_type": type(sample_meta["user_id"]).__name__,
+                "chunk_count": len(valid_chunks),
+            },
+        )
     return len(valid_chunks)
 
 
