@@ -32,3 +32,4 @@ flashrank
 groq
 ddgs
 langchain-mcp-adapters
+langchain-openai
