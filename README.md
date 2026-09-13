@@ -12,6 +12,9 @@ NYRA uses a modern React frontend and a FastAPI Python backend powered by LangGr
 
 ```mermaid
 flowchart TD
+    %% Styling
+    linkStyle default stroke-width:3px
+
     %% Client Layer
     Client(["💻 React 19 + Vite UI<br/>(Chat / KnowledgeBase / Voice)"])
 
