@@ -53,12 +53,16 @@ vector_store = QdrantVectorStore(
     client=qdrant_client,
     collection_name="nyra_knowledge_base",
     embedding=embeddings,
+    validate_collection_config=False,
+    validate_embeddings=False,
 )
 
 shared_vector_store = QdrantVectorStore(
     client=qdrant_client,
     collection_name="nyra_shared_faq",
     embedding=embeddings,
+    validate_collection_config=False,
+    validate_embeddings=False,
 )
 
 
