@@ -293,14 +293,18 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
         }
       };
 
+      let sseBuffer = '';
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n\n');
+        sseBuffer += decoder.decode(value, { stream: true });
 
-        for (const line of lines) {
+        let boundary = sseBuffer.indexOf('\n\n');
+        while (boundary !== -1) {
+          const line = sseBuffer.slice(0, boundary);
+          sseBuffer = sseBuffer.slice(boundary + 2);
+
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
@@ -324,6 +328,7 @@ const CinematicVoiceOrbInner: React.FC<CinematicVoiceOrbProps> = ({ onClose, onM
               // skip malformed SSE lines
             }
           }
+          boundary = sseBuffer.indexOf('\n\n');
         }
       }
 

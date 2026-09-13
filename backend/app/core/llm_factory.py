@@ -10,13 +10,15 @@ Architecture:
 Model IDs (August 2026):
   Gemini:      gemini-3.7-flash
   Groq:        openai/gpt-oss-20b (writer), openai/gpt-oss-120b (researcher)
-  OpenRouter:  meta-llama/llama-4-maverick
+  OpenRouter:  meta-llama/llama-3.1-8b-instruct
 """
 
 import logging
 import time
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.runnables import Runnable
+from langchain_core.runnables.fallbacks import RunnableWithFallbacks
 
 from app.core.config import settings
 
@@ -67,6 +69,7 @@ class ProviderCircuit:
                 "does not exist",
                 "not supported",
                 "deprecated",
+                "not found",
             ]
         ):
             self.is_permanent = True
@@ -97,20 +100,69 @@ def _get_circuit(name: str) -> ProviderCircuit:
     return _circuits[name]
 
 
+from langchain_core.callbacks import BaseCallbackHandler
+
+class CircuitBreakerCallback(BaseCallbackHandler):
+    """
+    LangChain callback to log timing for every call and update the circuit breaker.
+    """
+    def __init__(self, provider_name: str, model_name: str):
+        self.provider = provider_name
+        self.model = model_name
+        self.start_times = {}
+
+    def on_llm_start(self, serialized, prompts, run_id, **kwargs):
+        self.start_times[run_id] = time.time()
+
+    def on_chat_model_start(self, serialized, messages, run_id, **kwargs):
+        self.start_times[run_id] = time.time()
+
+    def on_llm_end(self, response, run_id, **kwargs):
+        start = self.start_times.pop(run_id, time.time())
+        duration_ms = (time.time() - start) * 1000
+        _get_circuit(self.provider).record_success()
+        logger.info(
+            "llm_call",
+            extra={
+                "provider": self.provider,
+                "model": self.model,
+                "outcome": "success",
+                "duration_ms": round(duration_ms, 1),
+            },
+        )
+
+    def on_llm_error(self, error, run_id, **kwargs):
+        start = self.start_times.pop(run_id, time.time())
+        duration_ms = (time.time() - start) * 1000
+        _get_circuit(self.provider).record_failure(error)
+        logger.error(
+            "llm_call",
+            extra={
+                "provider": self.provider,
+                "model": self.model,
+                "outcome": "failure",
+                "duration_ms": round(duration_ms, 1),
+                "error": str(error)[:200],
+            },
+        )
+
 # ---------------------------------------------------------------------------
 # Provider builders
 # ---------------------------------------------------------------------------
 
-
 def _build_gemini(model: str = "gemini-3.7-flash", timeout: int = 10, **kwargs):
     """Create a Gemini LLM instance."""
-    return ChatGoogleGenerativeAI(
+    if not _get_circuit("gemini").is_available():
+        return None
+    llm = ChatGoogleGenerativeAI(
         model=model,
         api_key=settings.GEMINI_API_KEY,
         max_retries=1,
         request_timeout=timeout,
+        callbacks=[CircuitBreakerCallback("gemini", model)],
         **kwargs,
     )
+    return llm
 
 
 def _build_groq(model: str = "openai/gpt-oss-20b", timeout: int = 5, **kwargs):
@@ -121,17 +173,19 @@ def _build_groq(model: str = "openai/gpt-oss-20b", timeout: int = 5, **kwargs):
         return None
     from langchain_groq import ChatGroq
 
-    return ChatGroq(
+    llm = ChatGroq(
         model=model,
         api_key=settings.GROQ_API_KEY,
         max_retries=0,
         request_timeout=timeout,
+        callbacks=[CircuitBreakerCallback("groq", model)],
         **kwargs,
     )
+    return llm
 
 
 def _build_openrouter(
-    model: str = "meta-llama/llama-4-maverick", timeout: int = 8, **kwargs
+    model: str = "meta-llama/llama-3.1-8b-instruct", timeout: int = 8, **kwargs
 ):
     """Create an OpenRouter LLM instance (returns None if no API key or circuit open)."""
     if not settings.OPENROUTER_API_KEY:
@@ -140,14 +194,16 @@ def _build_openrouter(
         return None
     from langchain_openai import ChatOpenAI
 
-    return ChatOpenAI(
+    llm = ChatOpenAI(
         model=model,
         api_key=settings.OPENROUTER_API_KEY,
         base_url="https://openrouter.ai/api/v1",
         max_retries=0,
         timeout=timeout,
+        callbacks=[CircuitBreakerCallback("openrouter", model)],
         **kwargs,
     )
+    return llm
 
 
 def _with_optional_fallbacks(primary, fallbacks):
@@ -161,89 +217,6 @@ def _with_optional_fallbacks(primary, fallbacks):
 
 
 # ---------------------------------------------------------------------------
-# Instrumented wrapper — logs every LLM call with timing + circuit updates
-# ---------------------------------------------------------------------------
-
-
-class InstrumentedLLM:
-    """
-    Wraps a LangChain LLM (or chain-with-fallbacks) and logs timing for
-    every call. Also updates the circuit breaker on success/failure.
-    """
-
-    def __init__(self, llm, provider_name: str, model_name: str):
-        self._llm = llm
-        self._provider = provider_name
-        self._model = model_name
-
-    # Forward all attribute access to the wrapped LLM so LangChain works
-    def __getattr__(self, name):
-        return getattr(self._llm, name)
-
-    def invoke(self, *args, **kwargs):
-        start = time.time()
-        try:
-            result = self._llm.invoke(*args, **kwargs)
-            duration_ms = (time.time() - start) * 1000
-            _get_circuit(self._provider).record_success()
-            logger.info(
-                "llm_call",
-                extra={
-                    "provider": self._provider,
-                    "model": self._model,
-                    "outcome": "success",
-                    "duration_ms": round(duration_ms, 1),
-                },
-            )
-            return result
-        except Exception as e:
-            duration_ms = (time.time() - start) * 1000
-            _get_circuit(self._provider).record_failure(e)
-            logger.error(
-                "llm_call",
-                extra={
-                    "provider": self._provider,
-                    "model": self._model,
-                    "outcome": "failure",
-                    "duration_ms": round(duration_ms, 1),
-                    "error": str(e)[:200],
-                },
-            )
-            raise
-
-    async def ainvoke(self, *args, **kwargs):
-        start = time.time()
-        try:
-            result = await self._llm.ainvoke(*args, **kwargs)
-            duration_ms = (time.time() - start) * 1000
-            _get_circuit(self._provider).record_success()
-            logger.info(
-                "llm_call",
-                extra={
-                    "provider": self._provider,
-                    "model": self._model,
-                    "outcome": "success",
-                    "duration_ms": round(duration_ms, 1),
-                },
-            )
-            return result
-        except Exception as e:
-            duration_ms = (time.time() - start) * 1000
-            _get_circuit(self._provider).record_failure(e)
-            logger.error(
-                "llm_call",
-                extra={
-                    "provider": self._provider,
-                    "model": self._model,
-                    "outcome": "failure",
-                    "duration_ms": round(duration_ms, 1),
-                    "error": str(e)[:200],
-                },
-            )
-            raise
-
-
-# ---------------------------------------------------------------------------
 # Public API — used by graph.py
 # ---------------------------------------------------------------------------
 
@@ -251,14 +224,28 @@ class InstrumentedLLM:
 def get_router_llm():
     """
     Ultra-fast LLM for the Supervisor routing decision.
-    Uses fast flash model with tight timeout — no fallbacks (speed > resilience).
+    Uses fallback chain.
     """
-    return _build_gemini(model="gemini-3.7-flash", timeout=10)
+    primary = _build_gemini(model="gemini-3.7-flash", timeout=10)
+    groq = _build_groq(model="openai/gpt-oss-20b", timeout=10)
+    # OpenRouter llama-3.1-8b-instruct does not support tools (used by with_structured_output)
+    
+    valid_llms = [llm for llm in [primary, groq] if llm is not None]
+    if not valid_llms:
+        raise ValueError("No LLM providers available for router")
+    return _with_optional_fallbacks(valid_llms[0], valid_llms[1:])
 
 
 def get_fast_llm():
     """Ultra-fast LLM for low-latency tasks (simple query fast-path)."""
-    return _build_gemini(model="gemini-3.7-flash", timeout=10)
+    primary = _build_gemini(model="gemini-3.7-flash", timeout=10)
+    groq = _build_groq(model="openai/gpt-oss-20b", timeout=10)
+    or_llm = _build_openrouter(timeout=10)
+    
+    valid_llms = [llm for llm in [primary, groq, or_llm] if llm is not None]
+    if not valid_llms:
+        raise ValueError("No LLM providers available for fast path")
+    return _with_optional_fallbacks(valid_llms[0], valid_llms[1:])
 
 
 def get_frontier_llm(tools=None):
@@ -266,31 +253,37 @@ def get_frontier_llm(tools=None):
     Most powerful LLM for the Researcher (complex agentic / tool-use tasks).
     Primary: Gemini 3.7 Flash
     Fallback 1: Groq gpt-oss-120b
-    Fallback 2: OpenRouter Llama 4 Maverick
     """
     primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(model="openai/gpt-oss-120b", timeout=25)
-    or_llm = _build_openrouter(timeout=25)
+    # OpenRouter llama-3.1-8b-instruct does not support tools
 
+    valid_llms = [llm for llm in [primary, groq] if llm is not None]
+    if not valid_llms:
+        raise ValueError("No LLM providers available for frontier")
+
+    head = valid_llms[0]
+    tail = valid_llms[1:]
+    
     if tools:
-        primary = primary.bind_tools(tools)
-        if groq:
-            groq = groq.bind_tools(tools)
-        if or_llm:
-            or_llm = or_llm.bind_tools(tools)
+        head = head.bind_tools(tools)
+        tail = [llm.bind_tools(tools) for llm in tail]
 
-    return _with_optional_fallbacks(primary, [groq, or_llm])
+    return _with_optional_fallbacks(head, tail)
 
 
 def get_writer_llm():
     """
     LLM for the Writer agent (expressive, fast drafting).
-    Primary: Gemini 3.7 Flash
-    Fallback: Groq gpt-oss-20b
     """
     primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(model="openai/gpt-oss-20b", timeout=25)
-    return _with_optional_fallbacks(primary, [groq])
+    or_llm = _build_openrouter(timeout=25)
+    
+    valid_llms = [llm for llm in [primary, groq, or_llm] if llm is not None]
+    if not valid_llms:
+        raise ValueError("No LLM providers available for writer")
+    return _with_optional_fallbacks(valid_llms[0], valid_llms[1:])
 
 
 def get_robust_llm():
@@ -298,12 +291,22 @@ def get_robust_llm():
     primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(timeout=25)
     or_llm = _build_openrouter(timeout=25)
-    return _with_optional_fallbacks(primary, [groq, or_llm])
+    
+    valid_llms = [llm for llm in [primary, groq, or_llm] if llm is not None]
+    if not valid_llms:
+        raise ValueError("No LLM providers available for robust")
+    return _with_optional_fallbacks(valid_llms[0], valid_llms[1:])
 
 
 def get_critic_llm():
     """
     LLM for the Critic (hallucination checker).
-    Uses fast flash model — no fallbacks (speed > resilience).
     """
-    return _build_gemini(model="gemini-3.7-flash", timeout=10)
+    primary = _build_gemini(model="gemini-3.7-flash", timeout=10)
+    groq = _build_groq(model="openai/gpt-oss-20b", timeout=10)
+    # OpenRouter llama-3.1-8b-instruct does not support tools (used by with_structured_output)
+    
+    valid_llms = [llm for llm in [primary, groq] if llm is not None]
+    if not valid_llms:
+        raise ValueError("No LLM providers available for critic")
+    return _with_optional_fallbacks(valid_llms[0], valid_llms[1:])

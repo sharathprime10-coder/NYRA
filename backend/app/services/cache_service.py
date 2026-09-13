@@ -42,12 +42,12 @@ def get_redis_client():
     return _redis_client
 
 
-def _generate_cache_key(query: str, user_id: int, document_id: str | None) -> str:
+def _generate_cache_key(query: str, user_id: int, document_id: str | None, thinking_level: str = "low", tone: str = "default") -> str:
     """Generate a semantic hash key for the query, scoped to the user and optional document."""
     normalized_query = query.strip().lower()
 
     # Create a stable string representation
-    key_content = f"user:{user_id}|doc:{document_id or 'none'}|query:{normalized_query}"
+    key_content = f"user:{user_id}|doc:{document_id or 'none'}|query:{normalized_query}|thinking:{thinking_level}|tone:{tone}"
 
     # Hash it to ensure we have a safe, bounded length key
     key_hash = hashlib.sha256(key_content.encode("utf-8")).hexdigest()
@@ -55,10 +55,10 @@ def _generate_cache_key(query: str, user_id: int, document_id: str | None) -> st
 
 
 def get_cached_response(
-    query: str, user_id: int, document_id: str | None
+    query: str, user_id: int, document_id: str | None, thinking_level: str = "low", tone: str = "default"
 ) -> dict[str, Any] | None:
     """Retrieve a cached response if it exists."""
-    key = _generate_cache_key(query, user_id, document_id)
+    key = _generate_cache_key(query, user_id, document_id, thinking_level, tone)
     client = get_redis_client()
 
     if client == "memory":
@@ -86,10 +86,12 @@ def set_cached_response(
     user_id: int,
     document_id: str | None,
     response_data: dict[str, Any],
+    thinking_level: str = "low",
+    tone: str = "default",
     ttl_seconds: int = 900,  # 15 minutes (was 1 hour — shorter is safer)
 ):
     """Cache the response with a time-to-live."""
-    key = _generate_cache_key(query, user_id, document_id)
+    key = _generate_cache_key(query, user_id, document_id, thinking_level, tone)
     client = get_redis_client()
 
     serialized_data = json.dumps(response_data)

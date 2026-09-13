@@ -49,8 +49,16 @@ const Login: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Login failed:", err);
-      const errorMessage = err.response?.data?.detail || err.message || "BACKEND_UNREACHABLE_OR_CORS_ERROR";
-      setError(String(errorMessage));
+      if (err.code === 'ERR_NETWORK' || !err.response) {
+        setError(
+          "Cannot reach the server. Please make sure the backend is running on " +
+          (import.meta.env.VITE_API_URL || "http://localhost:8000") +
+          " and try again."
+        );
+      } else {
+        const errorMessage = err.response?.data?.detail || err.message || "Login failed. Please try again.";
+        setError(String(errorMessage));
+      }
     }
   };
   return (
@@ -116,7 +124,12 @@ const Login: React.FC = () => {
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={() => {
-                    setError("Google authentication failed.");
+                    console.error("Google Sign-In button failed to initialize or authenticate.");
+                    setError(
+                      "Google Sign-In failed. This can happen if pop-ups are blocked, " +
+                      "an ad-blocker is interfering, or the Google Client ID is misconfigured. " +
+                      "Please check your browser settings and try again."
+                    );
                   }}
                   useOneTap
                   theme="filled_black"

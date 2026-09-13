@@ -182,14 +182,18 @@ const Chat: React.FC = () => {
       
       if (!reader) throw new Error("No reader available");
 
+      let sseBuffer = '';
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n\n');
+        sseBuffer += decoder.decode(value, { stream: true });
         
-        for (const line of lines) {
+        let boundary = sseBuffer.indexOf('\n\n');
+        while (boundary !== -1) {
+          const line = sseBuffer.slice(0, boundary);
+          sseBuffer = sseBuffer.slice(boundary + 2);
+          
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
@@ -205,6 +209,8 @@ const Chat: React.FC = () => {
                 setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: m.content + data.content } : m));
               } else if (data.event === 'clear') {
                 setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: '' } : m));
+              } else if (data.event === 'sources') {
+                setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, sources: data.content } : m));
               } else if (data.event === 'end') {
                 if (data.session_id) {
                     setSessionId(data.session_id);
@@ -215,6 +221,7 @@ const Chat: React.FC = () => {
                 console.error("Error parsing SSE JSON:", e, line);
             }
           }
+          boundary = sseBuffer.indexOf('\n\n');
         }
       }
     } catch (err: any) {

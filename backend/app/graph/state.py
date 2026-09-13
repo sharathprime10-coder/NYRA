@@ -23,6 +23,7 @@ class NYRAState(TypedDict):
     critic_attempts: int | None
     tool_invoked: bool | None
     routing_path: str | None
+    sources: list[dict] | None
 
     # RAG Retrieval Safeguards
     research_iterations: int | None

@@ -4,7 +4,10 @@ import shutil
 import time
 
 from google import genai
-from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
@@ -30,23 +33,31 @@ except Exception as e:
 from app.core.config import settings
 
 # Initialize Gemini Embeddings
-# It uses GEMINI_API_KEY from environment or settings
 os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
 
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2")
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0.2)
+llm = ChatGoogleGenerativeAI(model="gemini-3.7-flash", temperature=0.2)
 
-# Initialize Chroma Vector Store locally
-vector_store = Chroma(
+# Initialize Qdrant Client locally
+qdrant_client = QdrantClient(path="./qdrant_db")
+
+# Ensure collections exist
+collection_params = models.VectorParams(size=3072, distance=models.Distance.COSINE)
+if not qdrant_client.collection_exists("nyra_knowledge_base"):
+    qdrant_client.create_collection("nyra_knowledge_base", vectors_config=collection_params)
+if not qdrant_client.collection_exists("nyra_shared_faq"):
+    qdrant_client.create_collection("nyra_shared_faq", vectors_config=collection_params)
+
+vector_store = QdrantVectorStore(
+    client=qdrant_client,
     collection_name="nyra_knowledge_base",
-    embedding_function=embeddings,
-    persist_directory="./chroma_db",
+    embedding=embeddings,
 )
 
-shared_vector_store = Chroma(
+shared_vector_store = QdrantVectorStore(
+    client=qdrant_client,
     collection_name="nyra_shared_faq",
-    embedding_function=embeddings,
-    persist_directory="./chroma_db",
+    embedding=embeddings,
 )
 
 
@@ -69,7 +80,7 @@ def _extract_text_with_gemini(file_path: str) -> str:
 
         # Extract text
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-3.7-flash",
             contents=[
                 f,
                 "Extract all text from this document accurately. Preserve structure.",
@@ -100,7 +111,7 @@ def _transcribe_audio_with_groq(file_path: str) -> str:
 
 
 def process_and_store_document(file_path: str, document_id: str, user_id: int | str):
-    """Loads a file, chunks it, and stores embeddings in ChromaDB."""
+    """Loads a file, chunks it, and stores embeddings in Qdrant."""
     chunks = []
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -121,7 +132,6 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int | 
             print(f"Audio transcription failed: {e}")
     else:
         try:
-            # We try PyPDFLoader first. If it's an image or other format, this will throw an exception.
             loader = PyPDFLoader(file_path)
             docs = loader.load()
             chunks = text_splitter.split_documents(docs)
@@ -130,7 +140,6 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int | 
 
     has_text = any(chunk.page_content.strip() for chunk in chunks) if chunks else False
 
-    # Fallback to Gemini OCR if PyPDFLoader yields no text (or only empty pages)
     if not has_text and ext not in [".mp3", ".wav", ".m4a"]:
         try:
             print(
@@ -138,7 +147,6 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int | 
             )
             extracted_text = _extract_text_with_gemini(file_path)
             if extracted_text:
-                # Wrap text in Langchain Document and split
                 doc = LangchainDocument(
                     page_content=extracted_text, metadata={"source": file_path}
                 )
@@ -146,9 +154,6 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int | 
         except Exception as e:
             print(f"Gemini OCR fallback failed: {e}")
 
-    # Add metadata and filter empty chunks
-    # CRITICAL: Cast document_id and user_id to str() to ensure ChromaDB
-    # metadata type consistency. The rag_tool filter uses str() comparisons.
     valid_chunks = []
     for i, chunk in enumerate(chunks):
         if chunk.page_content.strip():
@@ -159,12 +164,11 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int | 
 
     if valid_chunks:
         vector_store.add_documents(valid_chunks)
-        # Log the exact metadata types written — proof for debugging & testing
         sample_meta = valid_chunks[0].metadata
         logging.info(
-            "chroma_chunks_written",
+            "chunks_written",
             extra={
-                "event": "chroma_chunks_written",
+                "event": "chunks_written",
                 "document_id": sample_meta["document_id"],
                 "document_id_type": type(sample_meta["document_id"]).__name__,
                 "user_id": sample_meta["user_id"],
@@ -176,29 +180,37 @@ def process_and_store_document(file_path: str, document_id: str, user_id: int | 
 
 
 def query_knowledge_base(query: str, filters: dict = None):
-    """Retrieves relevant chunks from ChromaDB using Hybrid Search (Dense + BM25) and FlashRank reranking."""
+    """Retrieves relevant chunks from Qdrant using Hybrid Search (Dense + BM25) and FlashRank reranking."""
     start_time = time.time()
-    # We'll use this to keep track of the final distance/score for confidence
     top_score = 0.0
     final_docs = []
     is_shared = False
 
     try:
-        # 1. Fetch dense results (wider net: k=10)
+        # Convert dict filters to Qdrant models.Filter
+        qdrant_filter = None
+        if filters:
+            must_conditions = []
+            for k, v in filters.items():
+                must_conditions.append(models.FieldCondition(key=f"metadata.{k}", match=models.MatchValue(value=v)))
+            qdrant_filter = models.Filter(must=must_conditions)
+
         dense_retriever = vector_store.as_retriever(
-            search_type="similarity", search_kwargs={"k": 10, "filter": filters}
+            search_type="similarity", search_kwargs={"k": 10, "filter": qdrant_filter}
         )
 
         # 2. Fetch BM25 Keyword docs
-        all_docs_data = vector_store.get(where=filters)
-
         bm25_retriever = None
-        if all_docs_data and all_docs_data.get("documents"):
+        if filters:
+            scroll_res, _ = qdrant_client.scroll(
+                collection_name="nyra_knowledge_base",
+                scroll_filter=qdrant_filter,
+                limit=1000,
+                with_payload=True
+            )
             bm25_docs = [
-                LangchainDocument(page_content=doc, metadata=meta)
-                for doc, meta in zip(
-                    all_docs_data["documents"], all_docs_data["metadatas"]
-                )
+                LangchainDocument(page_content=r.payload.get("page_content", ""), metadata=r.payload.get("metadata", {}))
+                for r in scroll_res
             ]
             if bm25_docs:
                 bm25_retriever = BM25Retriever.from_documents(bm25_docs)
@@ -219,7 +231,6 @@ def query_knowledge_base(query: str, filters: dict = None):
                 base_compressor=flashrank_compressor, base_retriever=ensemble_retriever
             )
             final_docs = compression_retriever.invoke(query)
-            # FlashRank provides 'relevance_score' in metadata
             if final_docs:
                 top_score = final_docs[0].metadata.get("relevance_score", 0.0)
         else:
@@ -228,17 +239,14 @@ def query_knowledge_base(query: str, filters: dict = None):
 
     except Exception as e:
         print(f"Hybrid retrieval failed: {e}. Falling back to basic dense.")
-        # Fallback completely
         dense_results = vector_store.similarity_search_with_score(
-            query, k=4, filter=filters
+            query, k=4, filter=qdrant_filter
         )
         final_docs = [doc for doc, score in dense_results]
         top_score = (
             1.0 if not dense_results else (1.0 - dense_results[0][1])
-        )  # invert distance
+        )
 
-    # Confidence scoring based on FlashRank score (usually 0 to 1)
-    # If using distance fallback, logic might differ slightly, but we map it roughly:
     if not final_docs or top_score < 0.3:
         confidence = "Low"
     elif top_score < 0.7:
@@ -246,7 +254,6 @@ def query_knowledge_base(query: str, filters: dict = None):
     else:
         confidence = "High"
 
-    # Shared FAQ Fallback if low confidence
     if not final_docs or confidence == "Low":
         try:
             shared_results = shared_vector_store.similarity_search_with_score(
@@ -256,7 +263,7 @@ def query_knowledge_base(query: str, filters: dict = None):
                 shared_min_dist = min([score for doc, score in shared_results])
                 if (
                     shared_min_dist < 0.6
-                ):  # Only fallback if shared FAQ has a good match
+                ):
                     final_docs = [doc for doc, score in shared_results]
                     confidence = "Medium"
                     is_shared = True
@@ -291,14 +298,24 @@ def query_knowledge_base(query: str, filters: dict = None):
             for doc in final_docs
         ],
         "confidence": confidence,
-        "min_distance": 1.0
-        - top_score,  # Mock min_distance so the frontend doesn't break
+        "min_distance": 1.0 - top_score,
     }
 
 
 def delete_document_from_index(document_id: str):
-    """Deletes all chunks associated with a document_id from Chroma."""
+    """Deletes all chunks associated with a document_id from Qdrant."""
     try:
-        vector_store._collection.delete(where={"document_id": document_id})
+        qdrant_client.delete(
+            collection_name="nyra_knowledge_base",
+            points_selector=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="metadata.document_id",
+                        match=models.MatchValue(value=str(document_id))
+                    )
+                ]
+            )
+        )
     except Exception as e:
-        print(f"Error deleting from chroma: {e}")
+        print(f"Error deleting from qdrant: {e}")
+

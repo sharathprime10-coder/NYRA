@@ -130,7 +130,7 @@ async def send_message(
     def check_cache():
         if chat_request.force_refresh:
             return None
-        return get_cached_response(chat_request.message, current_user.id, doc_id)
+        return get_cached_response(chat_request.message, current_user.id, doc_id, thinking_level, chat_request.tone)
 
     history, cached = await asyncio.gather(
         asyncio.to_thread(fetch_history), asyncio.to_thread(check_cache)
@@ -193,7 +193,7 @@ async def send_message(
 
         # Save user message
         db_user_msg = ChatMessage(
-            session_id=session_id, role="user", content=chat_request.message
+            session_id=session_id, role="user", content=clean_msg
         )
         db.add(db_user_msg)
         db.commit()
@@ -224,6 +224,8 @@ async def send_message(
                 str(current_user.id),
                 doc_id,
                 {"answer": answer, "sources": [], "confidence": "High"},
+                thinking_level,
+                chat_request.tone,
             )
             return ChatMessageResponse(
                 answer=answer,
@@ -258,6 +260,8 @@ async def send_message(
                         str(current_user.id),
                         doc_id,
                         {"answer": full_answer, "sources": [], "confidence": "High"},
+                        thinking_level,
+                        chat_request.tone,
                     )
 
                 await asyncio.to_thread(_save)
@@ -323,7 +327,7 @@ async def send_message(
         input_messages.append(HumanMessage(content=chat_request.message))
 
     db_user_msg = ChatMessage(
-        session_id=session_id, role="user", content=chat_request.message
+        session_id=session_id, role="user", content=clean_msg
     )
     db.add(db_user_msg)
     db.commit()
@@ -354,6 +358,10 @@ async def send_message(
                     chunk = event["data"]["chunk"].content
                     if isinstance(chunk, str) and chunk:
                         final_answer += chunk
+                elif kind == "on_chain_end" and name == "writer":
+                    output = event["data"].get("output", {})
+                    if isinstance(output, dict) and "sources" in output:
+                        final_sources = output.get("sources", [])
         except Exception:
             from app.core.logging_config import setup_logging
 
@@ -367,7 +375,7 @@ async def send_message(
 
         def save_final_sync():
             db_ai_msg = ChatMessage(
-                session_id=session_id, role="ai", content=final_answer, sources=None
+                session_id=session_id, role="ai", content=final_answer, sources=json.dumps(final_sources) if final_sources else None
             )
             db.add(db_ai_msg)
             db.commit()
@@ -377,21 +385,24 @@ async def send_message(
                 doc_id,
                 {
                     "answer": final_answer,
-                    "sources": [],
+                    "sources": final_sources,
                     "confidence": "High",
                 },
+                thinking_level,
+                chat_request.tone,
             )
 
         await asyncio.to_thread(save_final_sync)
         return ChatMessageResponse(
             answer=final_answer,
-            sources=[],
+            sources=final_sources,
             confidence="High",
             session_id=str(session_id),
         )
 
     async def event_generator():
         final_answer = ""
+        final_sources = []
         try:
             async for event in nyra_graph.astream_events(
                 {"messages": input_messages, "user_id": str(current_user.id)},
@@ -431,11 +442,17 @@ async def send_message(
                     if chunk_text:
                         final_answer += chunk_text
                         yield f"data: {json.dumps({'event': 'token', 'content': chunk_text})}\n\n"
+                
+                # Capture final output of the writer node
+                elif kind == "on_chain_end" and name == "writer":
+                    output = event["data"].get("output", {})
+                    if isinstance(output, dict) and "sources" in output:
+                        final_sources = output.get("sources", [])
 
             # Save final message
             def save_final():
                 db_ai_msg = ChatMessage(
-                    session_id=session_id, role="ai", content=final_answer, sources=None
+                    session_id=session_id, role="ai", content=final_answer, sources=json.dumps(final_sources) if final_sources else None
                 )
                 db.add(db_ai_msg)
                 db.commit()
@@ -446,13 +463,16 @@ async def send_message(
                     doc_id,
                     {
                         "answer": final_answer,
-                        "sources": [],
+                        "sources": final_sources,
                         "confidence": "High",
                     },
+                    thinking_level,
+                    chat_request.tone,
                 )
 
             await asyncio.to_thread(save_final)
 
+            yield f"data: {json.dumps({'event': 'sources', 'content': final_sources})}\n\n"
             yield f"data: {json.dumps({'event': 'end', 'session_id': session_id})}\n\n"
 
         except Exception:

@@ -307,36 +307,28 @@ async def writer_node(state: NYRAState, config=None):
             },
         )
 
-    # Extract tool results to inject directly into the writer's context
     tool_context = ""
     low_confidence = False
+    collected_sources = []
 
     for msg in messages:
         if isinstance(msg, ToolMessage):
             try:
                 data = json.loads(msg.content)
 
-                # rag_tool returns {"context": {... dict from query_knowledge_base ...}}
-                if "context" in data and isinstance(data["context"], dict):
-                    context_dict = data["context"]
-                    if (
-                        "confidence" in context_dict
-                        and context_dict["confidence"] == "Low"
-                    ):
+                if isinstance(data, dict):
+                    if data.get("confidence") == "Low":
                         low_confidence = True
 
-                    sources = context_dict.get("sources", [])
+                    sources = data.get("sources", [])
                     if sources:
-                        context_str = "\n\n".join(
-                            [s.get("content", "") for s in sources]
-                        )
+                        collected_sources.extend(sources)
+
+                    if "context" in data and isinstance(data["context"], list):
+                        context_str = "\n\n".join(data["context"])
                         tool_context += f"\n--- RETRIEVED DATA ---\n{context_str}\n"
                     else:
-                        tool_context += "\n--- RETRIEVED DATA ---\nNo sources found.\n"
-                elif "context" in data and isinstance(data["context"], list):
-                    # Fallback for other tools that might return a list of strings
-                    context_str = "\n\n".join(data["context"])
-                    tool_context += f"\n--- RETRIEVED DATA ---\n{context_str}\n"
+                        tool_context += f"\n--- RETRIEVED DATA ---\n{msg.content}\n"
                 else:
                     tool_context += f"\n--- RETRIEVED DATA ---\n{msg.content}\n"
             except Exception:
@@ -445,7 +437,7 @@ async def writer_node(state: NYRAState, config=None):
                 "duration_ms": round(duration, 1),
             },
         )
-        return {"draft": draft, "sender": "writer"}
+        return {"draft": draft, "sender": "writer", "sources": collected_sources}
     except Exception as e:
         logging.error(f"Writer LLM failed: {e}")
         error_text = f"Error generating response: {str(e)}"
@@ -453,6 +445,7 @@ async def writer_node(state: NYRAState, config=None):
             "messages": [AIMessage(content=error_text)],
             "draft": error_text,
             "sender": "writer",
+            "sources": [],
         }
 
 
