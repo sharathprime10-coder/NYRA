@@ -4,10 +4,6 @@ import shutil
 import time
 
 from google import genai
-from langchain_qdrant import QdrantVectorStore
-from qdrant_client import QdrantClient
-from qdrant_client.http import models
-
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
@@ -17,7 +13,10 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document as LangchainDocument
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_qdrant import QdrantVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
 
 # Initialize FlashRank reranker globally
 try:
@@ -44,7 +43,9 @@ qdrant_client = QdrantClient(path="./qdrant_db")
 # Ensure collections exist
 collection_params = models.VectorParams(size=3072, distance=models.Distance.COSINE)
 if not qdrant_client.collection_exists("nyra_knowledge_base"):
-    qdrant_client.create_collection("nyra_knowledge_base", vectors_config=collection_params)
+    qdrant_client.create_collection(
+        "nyra_knowledge_base", vectors_config=collection_params
+    )
 if not qdrant_client.collection_exists("nyra_shared_faq"):
     qdrant_client.create_collection("nyra_shared_faq", vectors_config=collection_params)
 
@@ -192,7 +193,11 @@ def query_knowledge_base(query: str, filters: dict = None):
         if filters:
             must_conditions = []
             for k, v in filters.items():
-                must_conditions.append(models.FieldCondition(key=f"metadata.{k}", match=models.MatchValue(value=v)))
+                must_conditions.append(
+                    models.FieldCondition(
+                        key=f"metadata.{k}", match=models.MatchValue(value=v)
+                    )
+                )
             qdrant_filter = models.Filter(must=must_conditions)
 
         dense_retriever = vector_store.as_retriever(
@@ -206,10 +211,13 @@ def query_knowledge_base(query: str, filters: dict = None):
                 collection_name="nyra_knowledge_base",
                 scroll_filter=qdrant_filter,
                 limit=1000,
-                with_payload=True
+                with_payload=True,
             )
             bm25_docs = [
-                LangchainDocument(page_content=r.payload.get("page_content", ""), metadata=r.payload.get("metadata", {}))
+                LangchainDocument(
+                    page_content=r.payload.get("page_content", ""),
+                    metadata=r.payload.get("metadata", {}),
+                )
                 for r in scroll_res
             ]
             if bm25_docs:
@@ -243,9 +251,7 @@ def query_knowledge_base(query: str, filters: dict = None):
             query, k=4, filter=qdrant_filter
         )
         final_docs = [doc for doc, score in dense_results]
-        top_score = (
-            1.0 if not dense_results else (1.0 - dense_results[0][1])
-        )
+        top_score = 1.0 if not dense_results else (1.0 - dense_results[0][1])
 
     if not final_docs or top_score < 0.3:
         confidence = "Low"
@@ -261,9 +267,7 @@ def query_knowledge_base(query: str, filters: dict = None):
             )
             if shared_results:
                 shared_min_dist = min([score for doc, score in shared_results])
-                if (
-                    shared_min_dist < 0.6
-                ):
+                if shared_min_dist < 0.6:
                     final_docs = [doc for doc, score in shared_results]
                     confidence = "Medium"
                     is_shared = True
@@ -311,11 +315,10 @@ def delete_document_from_index(document_id: str):
                 must=[
                     models.FieldCondition(
                         key="metadata.document_id",
-                        match=models.MatchValue(value=str(document_id))
+                        match=models.MatchValue(value=str(document_id)),
                     )
                 ]
-            )
+            ),
         )
     except Exception as e:
         print(f"Error deleting from qdrant: {e}")
-

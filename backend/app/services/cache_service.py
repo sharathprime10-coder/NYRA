@@ -42,7 +42,13 @@ def get_redis_client():
     return _redis_client
 
 
-def _generate_cache_key(query: str, user_id: int, document_id: str | None, thinking_level: str = "low", tone: str = "default") -> str:
+def _generate_cache_key(
+    query: str,
+    user_id: int,
+    document_id: str | None,
+    thinking_level: str = "low",
+    tone: str = "default",
+) -> str:
     """Generate a semantic hash key for the query, scoped to the user and optional document."""
     normalized_query = query.strip().lower()
 
@@ -55,7 +61,11 @@ def _generate_cache_key(query: str, user_id: int, document_id: str | None, think
 
 
 def get_cached_response(
-    query: str, user_id: int, document_id: str | None, thinking_level: str = "low", tone: str = "default"
+    query: str,
+    user_id: int,
+    document_id: str | None,
+    thinking_level: str = "low",
+    tone: str = "default",
 ) -> dict[str, Any] | None:
     """Retrieve a cached response if it exists."""
     key = _generate_cache_key(query, user_id, document_id, thinking_level, tone)

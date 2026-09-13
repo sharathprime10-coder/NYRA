@@ -16,9 +16,9 @@ Model IDs (August 2026):
 import logging
 import time
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.fallbacks import RunnableWithFallbacks
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.core.config import settings
 
@@ -102,10 +102,12 @@ def _get_circuit(name: str) -> ProviderCircuit:
 
 from langchain_core.callbacks import BaseCallbackHandler
 
+
 class CircuitBreakerCallback(BaseCallbackHandler):
     """
     LangChain callback to log timing for every call and update the circuit breaker.
     """
+
     def __init__(self, provider_name: str, model_name: str):
         self.provider = provider_name
         self.model = model_name
@@ -146,9 +148,11 @@ class CircuitBreakerCallback(BaseCallbackHandler):
             },
         )
 
+
 # ---------------------------------------------------------------------------
 # Provider builders
 # ---------------------------------------------------------------------------
+
 
 def _build_gemini(model: str = "gemini-3.7-flash", timeout: int = 10, **kwargs):
     """Create a Gemini LLM instance."""
@@ -229,7 +233,7 @@ def get_router_llm():
     primary = _build_gemini(model="gemini-3.7-flash", timeout=10)
     groq = _build_groq(model="openai/gpt-oss-20b", timeout=10)
     # OpenRouter llama-3.1-8b-instruct does not support tools (used by with_structured_output)
-    
+
     valid_llms = [llm for llm in [primary, groq] if llm is not None]
     if not valid_llms:
         raise ValueError("No LLM providers available for router")
@@ -241,7 +245,7 @@ def get_fast_llm():
     primary = _build_gemini(model="gemini-3.7-flash", timeout=10)
     groq = _build_groq(model="openai/gpt-oss-20b", timeout=10)
     or_llm = _build_openrouter(timeout=10)
-    
+
     valid_llms = [llm for llm in [primary, groq, or_llm] if llm is not None]
     if not valid_llms:
         raise ValueError("No LLM providers available for fast path")
@@ -264,7 +268,7 @@ def get_frontier_llm(tools=None):
 
     head = valid_llms[0]
     tail = valid_llms[1:]
-    
+
     if tools:
         head = head.bind_tools(tools)
         tail = [llm.bind_tools(tools) for llm in tail]
@@ -279,7 +283,7 @@ def get_writer_llm():
     primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(model="openai/gpt-oss-20b", timeout=25)
     or_llm = _build_openrouter(timeout=25)
-    
+
     valid_llms = [llm for llm in [primary, groq, or_llm] if llm is not None]
     if not valid_llms:
         raise ValueError("No LLM providers available for writer")
@@ -291,7 +295,7 @@ def get_robust_llm():
     primary = _build_gemini(model="gemini-3.7-flash", timeout=30)
     groq = _build_groq(timeout=25)
     or_llm = _build_openrouter(timeout=25)
-    
+
     valid_llms = [llm for llm in [primary, groq, or_llm] if llm is not None]
     if not valid_llms:
         raise ValueError("No LLM providers available for robust")
@@ -305,7 +309,7 @@ def get_critic_llm():
     primary = _build_gemini(model="gemini-3.7-flash", timeout=10)
     groq = _build_groq(model="openai/gpt-oss-20b", timeout=10)
     # OpenRouter llama-3.1-8b-instruct does not support tools (used by with_structured_output)
-    
+
     valid_llms = [llm for llm in [primary, groq] if llm is not None]
     if not valid_llms:
         raise ValueError("No LLM providers available for critic")

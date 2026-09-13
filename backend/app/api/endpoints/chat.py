@@ -130,7 +130,13 @@ async def send_message(
     def check_cache():
         if chat_request.force_refresh:
             return None
-        return get_cached_response(chat_request.message, current_user.id, doc_id, thinking_level, chat_request.tone)
+        return get_cached_response(
+            chat_request.message,
+            current_user.id,
+            doc_id,
+            thinking_level,
+            chat_request.tone,
+        )
 
     history, cached = await asyncio.gather(
         asyncio.to_thread(fetch_history), asyncio.to_thread(check_cache)
@@ -192,9 +198,7 @@ async def send_message(
         fast_messages.append(HumanMessage(content=chat_request.message))
 
         # Save user message
-        db_user_msg = ChatMessage(
-            session_id=session_id, role="user", content=clean_msg
-        )
+        db_user_msg = ChatMessage(session_id=session_id, role="user", content=clean_msg)
         db.add(db_user_msg)
         db.commit()
 
@@ -326,9 +330,7 @@ async def send_message(
     else:
         input_messages.append(HumanMessage(content=chat_request.message))
 
-    db_user_msg = ChatMessage(
-        session_id=session_id, role="user", content=clean_msg
-    )
+    db_user_msg = ChatMessage(session_id=session_id, role="user", content=clean_msg)
     db.add(db_user_msg)
     db.commit()
 
@@ -354,6 +356,7 @@ async def send_message(
                 version="v2",
             ):
                 kind = event["event"]
+                name = event.get("name", "")
                 if kind == "on_chat_model_stream" and "writer" in event.get("tags", []):
                     chunk = event["data"]["chunk"].content
                     if isinstance(chunk, str) and chunk:
@@ -375,7 +378,10 @@ async def send_message(
 
         def save_final_sync():
             db_ai_msg = ChatMessage(
-                session_id=session_id, role="ai", content=final_answer, sources=json.dumps(final_sources) if final_sources else None
+                session_id=session_id,
+                role="ai",
+                content=final_answer,
+                sources=json.dumps(final_sources) if final_sources else None,
             )
             db.add(db_ai_msg)
             db.commit()
@@ -442,7 +448,7 @@ async def send_message(
                     if chunk_text:
                         final_answer += chunk_text
                         yield f"data: {json.dumps({'event': 'token', 'content': chunk_text})}\n\n"
-                
+
                 # Capture final output of the writer node
                 elif kind == "on_chain_end" and name == "writer":
                     output = event["data"].get("output", {})
@@ -452,7 +458,10 @@ async def send_message(
             # Save final message
             def save_final():
                 db_ai_msg = ChatMessage(
-                    session_id=session_id, role="ai", content=final_answer, sources=json.dumps(final_sources) if final_sources else None
+                    session_id=session_id,
+                    role="ai",
+                    content=final_answer,
+                    sources=json.dumps(final_sources) if final_sources else None,
                 )
                 db.add(db_ai_msg)
                 db.commit()
