@@ -12,96 +12,105 @@ NYRA uses a modern React frontend and a FastAPI Python backend powered by LangGr
 
 ```mermaid
 flowchart TD
-    subgraph Client["🖥️ Client — React 19 + Vite"]
+    %% Modern Glassmorphism-inspired Light Theme Styles
+    classDef default fill:#ffffff,stroke:#e2e8f0,stroke-width:1px,color:#334155,rx:12,ry:12
+    classDef client fill:#f0fdfa,stroke:#5eead4,stroke-width:2px,color:#0f766e,rx:12,ry:12
+    classDef api fill:#fdf4ff,stroke:#f9a8d4,stroke-width:2px,color:#be185d,rx:12,ry:12
+    classDef endpoint fill:#fdf4ff,stroke:#fbcfe8,stroke-width:1px,color:#be185d,rx:8,ry:8
+    classDef orchestrator fill:#eff6ff,stroke:#93c5fd,stroke-width:2px,color:#1d4ed8,rx:12,ry:12
+    classDef tool fill:#fefce8,stroke:#fde047,stroke-width:2px,color:#a16207,rx:12,ry:12
+    classDef db fill:#ecfdf5,stroke:#6ee7b7,stroke-width:2px,color:#047857,rx:12,ry:12
+    classDef llm fill:#fef2f2,stroke:#fca5a5,stroke-width:2px,color:#b91c1c,rx:12,ry:12
+    classDef container fill:#fafafa88,stroke:#cbd5e1,stroke-width:2px,stroke-dasharray: 5 5,color:#64748b,rx:16,ry:16
+    
+    linkStyle default stroke:#94a3b8,stroke-width:2px,fill:none
+
+    subgraph Client ["🖥️ Client (React 19 + Vite)"]
         direction TB
-        UI["Chat / KnowledgeBase /Voice UI"]
-        AuthCtx["AuthContext — JWT in localStorage"]
-        Axios["Axios client + auth interceptor"]
+        UI["Chat / KnowledgeBase / Voice UI"]:::client
+        AuthCtx["AuthContext (JWT)"]:::client
+        Axios["Axios Client"]:::client
         UI --> AuthCtx
         UI --> Axios
     end
 
-    subgraph API["🚪 API Layer — FastAPI"]
+    subgraph Backend ["🚪 Backend Services"]
         direction TB
-        CORS["CORS Middleware"]
-        Rate["slowapi Rate Limiter"]
-        AuthVerif["JWT / Google OAuth Verification"]
-        CORS --> Rate
-        Rate --> AuthVerif
+        
+        subgraph API ["FastAPI Layer"]
+            direction TB
+            CORS["CORS & Rate Limiter"]:::api
+            AuthVerif["OAuth / JWT Verification"]:::api
+            CORS --> AuthVerif
+            
+            subgraph Endpoints ["📡 Endpoints"]
+                direction LR
+                EpAuth["/api/auth"]:::endpoint
+                EpDocs["/api/documents"]:::endpoint
+                EpChat["/api/chat"]:::endpoint
+            end
+            
+            AuthVerif --> EpAuth
+            AuthVerif --> EpDocs
+            AuthVerif --> EpChat
+        end
+        
+        subgraph LangGraph ["🧠 Multi-Agent Orchestrator"]
+            direction TB
+            Supervisor["Supervisor Node"]:::orchestrator
+            Researcher["Researcher Node"]:::orchestrator
+            Writer["Writer Node"]:::orchestrator
+            Critic["Critic Node"]:::orchestrator
+            
+            Supervisor -- route --> Researcher
+            Supervisor -- route --> Writer
+            Researcher --> Writer
+            Writer -- route --> Critic
+            Critic -- revise --> Writer
+        end
+        
+        subgraph Tools ["🛠️ Tools & Retrieval"]
+            direction LR
+            Embed["Gemini Embeddings"]:::tool
+            Calc["Calculator"]:::tool
+            Web["Web Search"]:::tool
+            RAG["RAG Tool"]:::tool
+            MCP["MCP Filesystem"]:::tool
+        end
+    end
+    
+    subgraph Data ["💾 Persistent Storage & State"]
+        direction LR
+        PG[("PostgreSQL")]:::db
+        Disk[("Local Disk")]:::db
+        Chroma[("ChromaDB")]:::db
+        Checkpoint[("SQLite State")]:::db
     end
 
+    subgraph LLMs ["☁️ LLM Providers"]
+        direction LR
+        GeminiLLM["Google Gemini"]:::llm
+        Groq["Groq (Fallback)"]:::llm
+        OpenRouter["OpenRouter"]:::llm
+        GeminiLLM -.-> Groq -.-> OpenRouter
+    end
+
+    %% Architecture Flow Connections
     Axios --> CORS
 
-    subgraph Endpoints["📡 Endpoints"]
-        direction LR
-        EpAuth["/api/auth — signup, login, google, me"]
-        EpDocs["/api/documents — upload, list, delete"]
-        EpChat["/api/chat — send message, history"]
-    end
-    
-    AuthVerif --> EpAuth
-    AuthVerif --> EpDocs
-    AuthVerif --> EpChat
-
-    subgraph Storage["💾 Persistent Storage"]
-        direction LR
-        PG[("PostgreSQL<br>users, sessions, messages, documents")]
-        Disk[("Local disk<br>uploaded_docs/")]
-    end
-
-    subgraph Retrieval["📚 Retrieval Layer"]
-        direction TB
-        Embed["Gemini Embeddings"]
-        Chroma[("ChromaDB<br>nyra_knowledge_base")]
-        Embed --> Chroma
-    end
-
-    subgraph Tools["🛠️ Tool Layer"]
-        direction LR
-        MCP["MCP filesystem server<br>uploaded_docs access"]
-        Calc["calculator"]
-        Web["DuckDuckGo web_search"]
-        RAG["rag_tool"]
-    end
-
-    subgraph LangGraph["🧠 LangGraph Multi-Agent Orchestrator"]
-        direction TB
-        Supervisor["Supervisor Node<br>routes: researcher | writer"]
-        Researcher["Researcher Node<br>tool-calling agent"]
-        Writer["Writer Node<br>drafts final answer"]
-        Critic["Critic Node<br>hallucination / quality check"]
-        Checkpoint[("SQLite Checkpointer<br>nyra_checkpoints.db")]
-        
-        Supervisor -- route --> Researcher
-        Supervisor -- route --> Writer
-        Researcher --> Writer
-        Writer -- route --> Critic
-        Critic -- revise --> Writer
-        
-        Supervisor <--> Checkpoint
-        Researcher <--> Checkpoint
-    end
-
-    subgraph LLM["☁️ LLM Provider Cascade — with fallback"]
-        direction LR
-        GeminiLLM["Google Gemini — 3.7 Flash"]
-        Groq["Groq — gpt-oss-120b / 20b (optional)"]
-        OpenRouter["OpenRouter — llama-4-maverick (optional)"]
-        
-        GeminiLLM -. fallback .-> Groq
-        Groq -. fallback .-> OpenRouter
-    end
-
-    %% Cross-layer connections
-    EpAuth --> PG
-    EpDocs --> PG
-    EpDocs --> Disk
-    EpDocs -- background task --> Embed
-    
     EpChat --> Supervisor
     Critic -- approved --> EpChat
     
+    EpDocs -.-> PG
+    EpDocs -.-> Disk
+    EpDocs -- background --> Embed
+    EpAuth -.-> PG
+    
+    Supervisor <--> Checkpoint
+    Researcher <--> Checkpoint
     Researcher --> Tools
+    
+    Embed --> Chroma
     RAG --> Chroma
     MCP -. reads .-> Disk
     
@@ -109,6 +118,8 @@ flowchart TD
     Researcher --> GeminiLLM
     Writer --> GeminiLLM
     Critic --> GeminiLLM
+
+    class Client,Backend,API,LangGraph,Tools,Data,LLMs,Endpoints container;
 ```
 
 ## Features
