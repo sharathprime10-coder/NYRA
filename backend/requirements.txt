@@ -34,3 +34,5 @@ ddgs
 langchain-mcp-adapters
 langchain-openai
 redis
+langchain-qdrant
+qdrant-client
